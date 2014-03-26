@@ -1,0 +1,114 @@
+$code:
+    logo = radiusCfg.logo
+    ip = ""
+    myRadiusServer = radiusCfg.myRadiusServer
+
+
+
+<STYLE>
+body {
+  font-size: 10pt;
+  font-family: verdana,helvetica,arial,sans-serif;
+  color:#000000;
+  background-color:#9CBACE;
+}
+
+tr.heading {
+  background-color:#006699;
+}
+
+.button {
+	border: 1px solid #000000;
+	background-color: #ffffff;
+}
+</STYLE>
+
+
+<script type="text/javascript">
+//<![CDATA[
+var theForm = document.forms['frmValidator'];
+if (!theForm) {
+    theForm = document.frmValidator;
+}
+function __doPostBack(eventTarget, eventArgument) {
+    if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
+        theForm.__EVENTTARGET.value = eventTarget;
+        theForm.__EVENTARGUMENT.value = eventArgument;
+        theForm.submit();
+    }
+}
+
+function onSubmit(){
+		theForm.submit();
+}
+
+
+//]]>
+</script>
+
+
+<HTML>
+<HEAD>
+<TITLE>LHM ADAuth Script</TITLE>
+</HEAD>
+
+<BODY>
+<form id="frmValidator" method="post" action="radius.html">
+
+<table width="100%" border="0" cellpadding="2" cellspacing="0">
+	<tr class="heading">
+		<td colspan=3 align="center"><font color="white">&nbsp</td>
+	</tr>
+	<tr class="heading">
+		<td width="50%" valign="center"><font color="white"><b>RADIUS LHM Authentication</b></font></td>
+		<td><center><img width="216" height="51" src="$logo"></center></td>
+		<td width="50%" align="right" valign="center"><font color="white"><b>Powered by SonicWALL LHM</b>&nbsp</font></td>
+	</tr>
+	<tr class="heading">
+		<td colspan=3 align="center"><font color="white">&nbsp</td>
+	</tr>
+</table>
+
+<table width="90%" border="0" cellpadding="2" cellspacing="0">
+	<tr>
+		<td><b>Wecome $ip to SonicWALL's LHM Basic RADIUS Authenticator.</b><br><br>Please enter your username and password to obtain secure guest internet access.<br>
+		</td>
+	</tr>
+</table>
+<table width="100%" border="0" cellpadding="2" cellspacing="0">
+	<tr class="heading">
+		<td colspan=3 align="center"><font color="white">Using RADIUS Server: $myRadiusServer</td>
+	</tr>
+</table>
+<table width="100%" border="0" cellpadding="2" cellspacing="0">
+
+	<tr>
+		<td width="30%"><br>Enter your login name:</td>
+		<td width="30%"><input name="txtName" type="text" id="txtName" /></td>
+		<td width="40%"><span id="valTxtName" style="color:Red;visibility:hidden;">Please enter your name.</span></td>
+	</tr>
+	<tr>
+		<td width="30%"><br>Enter your password:</td>
+		<td width="30%"><input name="txtPassword" type="password" id="txtPassword" /></td>
+		<td width="40%"><span id="valTxtPassword" style="color:Red;visibility:hidden;">Please enter your password.</span></td>
+	</tr>
+	<tr>
+		<td></td><td><span id="authResult"></span>&nbsp</td>
+	</tr>
+	<tr>
+		<td></td>
+		<td><input type="submit" name="btnSubmit" value="Submit" onclick="onSubmit()" id="btnSubmit" class="button" />
+		&nbsp&nbsp
+		<input type="submit" name="btnClear" value=" Clear All " id="btnClear" class="button" />
+		</td>
+	</tr>
+	<tr>
+		<td colspan=2><asp:Label id=LHMResult runat="server" /></td>
+	</tr>
+	<tr>
+		<td colspan=2><asp:Label id=catchError runat="server" /></td>
+	</tr>
+</table>
+</form>
+</BODY>
+</HTML>

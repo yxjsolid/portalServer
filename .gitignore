@@ -1,0 +1,6 @@
+/.metadata/
+/.settings/
+/.idea
+*.pyc
+*.bak
+*.xml

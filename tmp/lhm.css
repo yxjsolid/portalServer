@@ -1,0 +1,57 @@
+body {
+	background-color: #FFFFFF;
+}
+A:link {
+	color: #f0f033;
+}
+A:hover {
+	color: #f0f033;
+}
+A:active {
+	color: #f0f033;
+}
+A:visited {
+	color: #f0f033;
+}
+.lhmTitle {
+	font-family: arial,verdana,helvetica;
+	font-size : 24px;
+	font-weight : bold;
+	color: #f0f0f0;
+}
+.lhmText {
+	font-family: arial,verdana,helvetica;
+	font-size : 14px;
+	font-weight : bold;
+	color: #f0f0f0;
+}
+.lhmTextSmall {
+	font-family: arial,verdana,helvetica;
+	font-size : 12px;
+	font-weight : bold;
+	color: #f0f0f0;
+}
+.lhmError {
+	font-family: arial,verdana,helvetica;
+	font-size : 14px;
+	font-weight : bold;
+	color: #f0f033;
+}
+.copyright {
+    FONT-WEIGHT: normal;
+    FONT-SIZE: 11px;
+    COLOR: #333333;
+    LINE-HEIGHT: 17px;
+    FONT-FAMILY: verdana, arial, helvetica, sans-serif;
+    TEXT-DECORATION: none
+}
+input.lhmButton {
+	height: 22;
+	width: 80;
+	font-family: arial,verdana,helvetica;
+	font-size: 13px;
+	font-weight: bold;
+	color: #333333;
+	background-color: #f0f0f0;
+	cursor:hand;
+}

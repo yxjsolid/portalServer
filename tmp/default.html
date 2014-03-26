@@ -1,0 +1,82 @@
+<STYLE>
+body {
+  font-size: 10pt;
+  font-family: verdana,helvetica,arial,sans-serif;
+  color:#000000;
+  background-color:#9CBACE;
+}
+
+tr.heading {
+  background-color:#006699;
+}
+
+.button {
+	border: 1px solid #000000;
+	background-color: #ffffff;
+}
+</STYLE>
+
+<HTML>
+<HEAD>
+<TITLE>LHM ADAuth Script</TITLE>
+</HEAD>
+
+<BODY>
+<form id="frmValidator" runat="server">
+
+<table width="100%" border="0" cellpadding="2" cellspacing="0">
+	<tr class="heading">
+		<td colspan=3 align="center"><font color="white">&nbsp</td>
+	</tr>
+	<tr class="heading">
+		<td width="50%" valign="center"><font color="white"><b>LDAP/AD LHM Authentication</b></font></td>
+		<td><center><img width="216" height="51" src="<%= logo %>"></center></td>
+		<td width="50%" align="right" valign="center"><font color="white"><b>Powered by SonicWALL LHM</b>&nbsp</font></td>
+	</tr>
+	<tr class="heading">
+		<td colspan=3 align="center"><font color="white">&nbsp</td>
+	</tr>
+</table>
+
+<table width="90%" border="0" cellpadding="2" cellspacing="0">
+	<tr>
+		<td><b>Wecome <%= ip%> to SonicWALL's LHM AD/LDAP Authenticator.</b><br><br>Enter your LDAP or Active Directory username and password to obtain secure guest internet access.<br><br>If your domain account specifies session timeout values, those values will be applied to your account, otherwise you will receive the default one hour (60 minutes) of access with a five minute idle timeout.<br>
+		</td>
+	</tr>
+</table>
+<table width="100%" border="0" cellpadding="2" cellspacing="0">
+	<tr class="heading">
+		<td colspan=3 align="center"><font color="white">Authentication domain: <%=myLdapDomain%></td>
+	</tr>
+</table>
+<table width="100%" border="0" cellpadding="2" cellspacing="0">
+	<tr>
+		<td width="30%"><br>Enter your login name:</td>
+		<td width="30%"><asp:TextBox id="txtName" runat="server" /></td>
+		<td width="40%"><asp:RequiredFieldValidator id="valTxtName" ControlToValidate="txtName" ErrorMessage="Please enter your name." runat="server" /></td>
+	</tr>
+	<tr>
+		<td width="30%"><br>Enter your password:</td>
+		<td width="30%"><asp:TextBox id="txtPassword" textmode="password" runat="server" /></td>
+		<td width="40%"><asp:RequiredFieldValidator id="valTxtPassword" ControlToValidate="txtPassword" ErrorMessage="Please enter your password." runat="server" /></td>
+	</tr>
+	<tr>
+		<td></td><td><asp:Label id=authResult runat="server" />&nbsp</td>
+	</tr>
+	<tr>
+		<td></td>
+		<td><asp:button id="btnSubmit" class="button" text="  Submit  " onClick="btnSubmit_Click" runat="server" />
+		&nbsp&nbsp
+		<asp:button id="btnClear" class="button" text=" Clear All " CausesValidation="False" onClick="OnBtnClearClicked" runat="server" />
+		</td>
+	</tr>
+	<tr>
+		<td colspan=2><asp:Label id=LHMResult runat="server" /></td>
+	</tr>
+	<tr>
+		<td colspan=2><asp:Label id=catchError runat="server" /></td>
+	</tr>
+</table>
+</form>
+</BODY>
+</HTML>
