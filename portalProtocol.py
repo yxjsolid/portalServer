@@ -48,10 +48,12 @@ class Portal_Frame(Structure):
 
     def __init__(self, type=REQ_CHALLENGE):
         Structure.__init__(self)
-        print "sizeof(Portal_Frame)", sizeof(Portal_Frame)
+        #print "sizeof(Portal_Frame)", sizeof(Portal_Frame)
 
         self.ver = 2
         self.type = type
+
+        self.attrList = []
         self.genSerialNo()
         return
 
@@ -61,8 +63,14 @@ class Portal_Frame(Structure):
         self.testSetAuthenticator()
         print [buffer(self)[:]]
 
-    def send(self):
-        return buffer(self)[:]
+    def getFrameData(self):
+        data = buffer(self)[:]
+        for attr in self.attrList:
+            data += attr.getData()
+
+        return data
+
+
 
     def receiveSome(self, bytes):
         fit = min(len(bytes), sizeof(self))
@@ -76,7 +84,7 @@ class Portal_Frame(Structure):
         fit = min(len(bytesa), sizeof(self.authenticator))
         memmove(addressof(self.authenticator), bytesa, fit)
 
-    def dump(self):
+    def dumpAll(self):
         for elem in self._fields_:
             elemName = elem[0]
             elemObj = getattr(self, elemName)
@@ -91,13 +99,15 @@ class Portal_Frame(Structure):
                 print dumpFormat %(elemName, elemObj)
 
 
+    def dumpAttr(self):
+
+        pass
+
 
 
     def genSerialNo(self):
         while True:
             serialNo = random.randint(1, 0xffff)
-            print serialNo
-
             if str(serialNo) in self.__class__._dictSerialNo_:
                 print "hasKey"
             else:
@@ -113,8 +123,54 @@ class Portal_Frame(Structure):
         pass
 
 
-frame = Portal_Frame()
-frame.dump()
+    def appendAttr(self, attr):
+        self.attrList.append(attr)
 
-frame.genSerialNo()
+    def genChallengeAck(self):
+        attr = Portal_Attr()
+        attr.genChallengeAttr()
+        self.appendAttr(attr)
 
+
+class Portal_Attr(Structure):
+    _fields_ = [("attrType",    c_ubyte),
+                ("attrLen",     c_ubyte)]
+
+    def __init__(self):
+        Structure.__init__(self)
+        self.attrData = None
+
+        return
+
+
+    def genRandomBytes(self, size):
+        output = (c_ubyte *size)()
+        for i in range(size):
+            rByte = random.randint(0, 0xff)
+            output[i] = c_ubyte(rByte)
+
+        return output
+
+    def genChallengeAttr(self):
+        self.attrType = 3
+        self.attrLen = 16
+        self.attrData = self.genRandomBytes(16)
+        return self
+
+    def getData(self):
+        data = buffer(self)[:] + buffer(self.attrData)[:]
+        return data
+
+
+    def genAttr(self, type):
+        pass
+
+
+if __name__ == '__main__':
+
+    # frame = Portal_Frame()
+    # frame.dump()
+    # frame.genSerialNo()
+
+    attr = Portal_Attr()
+    attr.genChallengeAttr()
