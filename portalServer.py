@@ -13,11 +13,14 @@ testPass = "password"
 
 class portalClient():
     def __init__(self, clientIp, serverIp, port):
-        self.server = (serverIp, port)
-        self.client = (clientIp, port)
+        self.server = (serverIp, int(port))
+        self.client = (clientIp, int(port))
 
         self.udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udpSocket.bind(self.client)
+        self.usrName = None
+        self.password = None
+
         pass
 
     def doAuth(self):
@@ -56,13 +59,20 @@ class portalClient():
         newFrame.dumpAll()
         return newFrame
 
+    def doAuth(self, usrName, password):
+        self.usrName = usrName
+        self.password = password
+
+        return self.doChallenge()
+
     def doChallenge(self):
         frame = Portal_Frame(portalProtocol.REQ_CHALLENGE)
 
         print "%x" % frame.serialNo
 
         newFrame = self.doSendReq(frame)
-        self.receiveChallengeAck(newFrame)
+        ret = self.receiveChallengeAck(newFrame)
+        return ret
 
     def receiveChallengeAck(self, frame):
         print "serino", frame.getSerialNo()
@@ -75,8 +85,9 @@ class portalClient():
         else:
             raise ValueError
 
-        self.doAuthReq(frame.getReqID(), testUser, testPass, challenge)
-        pass
+        ret = self.doAuthReq(frame.getReqID(), self.usrName, self.password, challenge)
+
+        return ret
 
 
     def doAuthReq(self, reqId, usrName, usrPass, challenge):
@@ -104,19 +115,28 @@ class portalClient():
 
         newFrame = self.doSendReq(authReq)
 
-        pass
+        ret = self.receiveAuthAck(newFrame)
+        return ret
+
+
+    def receiveAuthAck(self, frame):
+        if frame.getErrorCode() == CODE_SUCCESS:
+            return True
+        else:
+            return False
 
 
 
 
 if __name__ == '__main__':
-    port = 50100
+    port = "50100"
     serverIp = "10.103.12.6"
     myIp = '10.103.12.152'
 
-
     client = portalClient(myIp, serverIp, port)
+    ret = client.doAuth(testUser, testPass)
 
-    client.doChallenge()
-
-    print "test"
+    if ret:
+        print "login success"
+    else:
+        print "login failed"

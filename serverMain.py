@@ -1,12 +1,17 @@
+# -*- coding: utf-8 -*-
 import web
 from web import form
+from portalServer import *
 
+
+
+myPortalServerIp = "10.103.12.152"
 
 class myRadiusConfig():
     logoutPopup = True
     #Set the RADIUS server IP or Name
     #Make sure the LHM Server is setup as client on the RADIUS Server
-    myRadiusServer = "10.50.165.2"
+    myRadiusServer = "10.103.12.150"
 
     #Set the RADIUS Port
     myRadiusPort = "1812"
@@ -29,7 +34,8 @@ class myRadiusConfig():
     #Set the logo image to use
     logo = "static/sonicwall.gif"
 
-
+    ACIP = "10.103.12.6"
+    portalPort = "50100"
 
 login = form.Form(
     form.Textbox('txtName'),
@@ -79,6 +85,17 @@ class formtest:
             # extracting the validated arguments from the form.
             return "Grrreat success! boe: %s, bax: %s" % (f.d.boe, f['bax'].value)
 
+def doAuth(userName, password):
+
+    myCfg = myRadiusConfig()
+    acip = myCfg.ACIP
+    portalPort = myCfg.portalPort
+
+    client = portalClient(myPortalServerIp, acip, portalPort)
+    ret = client.doAuth(userName, password)
+
+    return ret
+
 
 class index():
     def __init__(self):
@@ -97,6 +114,12 @@ class index():
         if f.validates():
             print f.d
 
+        userName = f.d.txtName
+        password = f.d.txtPassword
+
+        print userName, password
+
+        doAuth(userName, password)
 
         #return self.render.radius(myRadiusConfig())
         return self.render.radius()
@@ -105,6 +128,18 @@ class index():
         #return "Hello, world!"
 
 if __name__ == "__main__":
+
+    #
+    # port = "50100"
+    # serverIp = "10.103.12.6"
+    # myIp = '10.103.12.152'
+    #
+    # client = portalClient(myIp, serverIp, port)
+    # ret = client.doAuth(testUser, testPass)
+
+
+
+
 
     print "test"
     urls = (
@@ -115,10 +150,6 @@ if __name__ == "__main__":
     radiusCfg = myRadiusConfig()
 
     global radiusCfg
-
-
-
-
     print globals()
 
 

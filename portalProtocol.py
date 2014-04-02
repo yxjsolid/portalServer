@@ -1,3 +1,4 @@
+#encoding: utf-8
 from ctypes import *
 import random
 import hashlib
@@ -30,6 +31,12 @@ REQ_INFO = 0x09
 ACK_INFO = 0x0a
 
 
+
+CODE_SUCCESS = 0
+CODE_REJECT = 1
+CODE_CONNECTED = 2
+CODE_NEED_RETRY = 4
+CODE_FAILED = 4
 
 
 class Portal_Frame(Structure):
@@ -134,6 +141,9 @@ class Portal_Frame(Structure):
 
         pass
 
+    def getErrorCode(self):
+        return self.errcode
+
     def getReqID(self):
         return self.reqID
 
@@ -169,6 +179,9 @@ class Portal_Frame(Structure):
 
     def setReqID(self, reqId):
         self.reqID = reqId
+
+    def setErrorCode(self, code):
+        self.errcode = code
 
     def appendAttr(self, attr):
         self.attrNum += 1
@@ -216,16 +229,21 @@ class Portal_Attr(Structure):
         self.attrData = usrName
 
     def genChapPassMD5(self, chapId, password, challenge):
-        dataString = chr(chapId) + password + buffer(challenge)[:]
-
+        data1 = buffer(challenge)[:]
+        
         m = hashlib.md5()
-        m.update(dataString)
+        m.update(chr(chapId))
+        m.update(password)
+        m.update(data1)
         digest = m.hexdigest()
         print "chapId:%x" % chapId
         print "chapPassword:", digest
         print "chall:", binascii.b2a_hex(buffer(challenge)[:])
 
         digest = binascii.a2b_hex(digest)
+
+        #raise EOFError
+
         return digest
 
     def genChapPassAttr(self, chapId, password, challenge):

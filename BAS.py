@@ -3,6 +3,10 @@ import portalProtocol
 from portalProtocol import Portal_Frame
 from time import sleep
 from portalProtocol import *
+from radiusClient import *
+
+radiusServer = "10.103.12.152"
+shardSecret = "password"
 
 
 class portalDaemon():
@@ -20,15 +24,20 @@ class portalDaemon():
         ackFrame.setSerialNo(reqFrame.serialNo)
         ackFrame.genReqId()
         challenge = ackFrame.genChallengeAck()
-
         self.lastChallenge = challenge
 
         print "set serialNo = %x \n" % ackFrame.serialNo
 
         self.doSend(ackFrame)
 
+    def doRadiusAuth(self, name, id, chall, chappass ):
+        radClient = portalRadiusClient(radiusServer, shardSecret)
+        ret = radClient.doAuth(name, id, chall, chappass)
+        return ret
+
     def handleAuthReq(self, reqFrame):
 
+        reqId = reqFrame.getReqID()
         nameAttr = reqFrame.getAttr(ATTR_USERNAME)
         chapPassAttr = reqFrame.getAttr(ATTR_CHAP_PASSWORD)
 
@@ -39,16 +48,35 @@ class portalDaemon():
         chapPass = buffer(chapPassAttr.getAttrData())[:]
         challenge = buffer(self.lastChallenge)[:]
 
-        print "name: ", name
-        print "chap: ", chapPass
-        print "challenge", challenge
+        print "handleAuthReq, reqId: %x" % reqId
+        print "handleAuthReq, name: ", name
+        print "handleAuthReq, chap: ", chapPass
+        print "handleAuthReq, challenge", challenge
 
         print binascii.b2a_hex(name)
         print binascii.b2a_hex(chapPass)
         print binascii.b2a_hex(challenge)
 
-        return
 
+        reqtmp = c_ushort(reqId)
+        reqIdBuff = (c_ubyte * 2)()
+        memmove(addressof(reqIdBuff), addressof(reqtmp), 2)
+        ret = self.doRadiusAuth(name, chr(reqIdBuff[1]), challenge, chapPass)
+
+        self.sendAuthAck(reqFrame, ret)
+        return ret
+
+    def sendAuthAck(self, reqFrame, ret):
+        ackFrame = Portal_Frame(portalProtocol.ACK_AUTH)
+        ackFrame.setSerialNo(reqFrame.getSerialNo())
+        ackFrame.setReqID(reqFrame.getReqID())
+
+        if ret:
+            ackFrame.setErrorCode(CODE_SUCCESS)
+        else:
+            ackFrame.setErrorCode(CODE_REJECT)
+
+        self.doSend(ackFrame)
 
     def doSend(self, frame):
         try:
@@ -57,10 +85,8 @@ class portalDaemon():
         ##os.system('cls')
             print '\x0D'
 
-
     def notImplement(self, frame):
         raise TypeError
-
 
     def parseData(self, data):
         frame = Portal_Frame()
@@ -80,7 +106,6 @@ class portalDaemon():
 
         func[frame.type](frame)
         return
-
 
     def run(self):
         while True:
