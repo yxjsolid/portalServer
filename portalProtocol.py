@@ -1,5 +1,6 @@
 from ctypes import *
 import random
+import hashlib
 import binascii
 
 # typedef struct PortalFrame
@@ -45,6 +46,7 @@ class Portal_Frame(Structure):
                 ("authenticator", c_ubyte * 16)]
 
     _dictSerialNo_ ={}
+    _dictReqID_ ={}
 
     def __init__(self, type=REQ_CHALLENGE):
         Structure.__init__(self)
@@ -54,8 +56,13 @@ class Portal_Frame(Structure):
         self.type = type
 
         self.attrList = []
-        self.genSerialNo()
+        #self.genSerialNo()
+
+        #print self.reqID
+
         return
+
+
 
     def testFame(self):
         self.ver = 1
@@ -70,11 +77,35 @@ class Portal_Frame(Structure):
 
         return data
 
-
-
     def receiveSome(self, bytes):
-        fit = min(len(bytes), sizeof(self))
-        memmove(addressof(self), bytes, fit)
+        if len(bytes) < sizeof(self):
+            raise IndexError
+
+        memmove(addressof(self), bytes, sizeof(self))
+        print "attrNum = ", self.attrNum
+
+        attrBytes = bytes[sizeof(self) :]
+        self.parseAttr(attrBytes)
+
+    def parseAttr(self, attrBytes):
+        attList = []
+
+        while len(attrBytes) > 0:
+            attr = Portal_Attr()
+            attr.receiveSome(attrBytes)
+            attr.dumpAll()
+
+            #dataTotalLen -= attr.getAttrLen()
+            attrBytes = attrBytes[attr.getAttrLen():]
+            attList.append(attr)
+
+
+        if len(attList) != self.attrNum:
+            raise IndexError
+
+        self.attrList = attList
+
+        pass
 
 
     def testSetAuthenticator(self):
@@ -103,7 +134,22 @@ class Portal_Frame(Structure):
 
         pass
 
+    def getReqID(self):
+        return self.reqID
 
+    def getSerialNo(self):
+        return self.serialNo
+
+    def genReqId(self):
+        while True:
+            reqID = random.randint(1, 0xffff)
+            if str(reqID) in self.__class__._dictReqID_:
+                print "hasKey"
+            else:
+                self.__class__._dictReqID_[str(reqID)] = 1
+                self.setReqID(reqID)
+                break
+        pass
 
     def genSerialNo(self):
         while True:
@@ -115,22 +161,39 @@ class Portal_Frame(Structure):
                 self.setSerialNo(serialNo)
 
                 break
-
         pass
 
     def setSerialNo(self, serialNo):
         self.serialNo = serialNo
         pass
 
+    def setReqID(self, reqId):
+        self.reqID = reqId
 
     def appendAttr(self, attr):
+        self.attrNum += 1
         self.attrList.append(attr)
+
+    def getAttr(self, attType):
+        for attr in self.attrList:
+            if attr.isType(attType):
+                return attr
+
+        return None
 
     def genChallengeAck(self):
         attr = Portal_Attr()
-        attr.genChallengeAttr()
+        challenge = attr.genChallengeAttr()
         self.appendAttr(attr)
+        return challenge
 
+
+
+
+ATTR_USERNAME = 0x1
+ATTR_PASSWORD = 0x2
+ATTR_CHALLENGE = 0x3
+ATTR_CHAP_PASSWORD = 0x4
 
 class Portal_Attr(Structure):
     _fields_ = [("attrType",    c_ubyte),
@@ -139,12 +202,39 @@ class Portal_Attr(Structure):
     def __init__(self):
         Structure.__init__(self)
         self.attrData = None
-
         return
 
+    def isType(self, type):
+        return (self.attrType == type)
+
+    def getAttrLen(self):
+        return self.attrLen
+
+    def genUserNameAttr(self, usrName):
+        self.attrType = ATTR_USERNAME
+        self.attrLen = len(usrName) + 2
+        self.attrData = usrName
+
+    def genChapPassMD5(self, chapId, password, challenge):
+        dataString = chr(chapId) + password + buffer(challenge)[:]
+
+        m = hashlib.md5()
+        m.update(dataString)
+        digest = m.hexdigest()
+        print "chapId:%x" % chapId
+        print "chapPassword:", digest
+        print "chall:", binascii.b2a_hex(buffer(challenge)[:])
+
+        digest = binascii.a2b_hex(digest)
+        return digest
+
+    def genChapPassAttr(self, chapId, password, challenge):
+        self.attrType = ATTR_CHAP_PASSWORD
+        self.attrLen = 16 + 2
+        self.attrData = self.genChapPassMD5(chapId, password, challenge)
 
     def genRandomBytes(self, size):
-        output = (c_ubyte *size)()
+        output = (c_ubyte * size)()
         for i in range(size):
             rByte = random.randint(0, 0xff)
             output[i] = c_ubyte(rByte)
@@ -152,18 +242,54 @@ class Portal_Attr(Structure):
         return output
 
     def genChallengeAttr(self):
-        self.attrType = 3
-        self.attrLen = 16
+        self.attrType = ATTR_CHALLENGE
+        self.attrLen = 16 + 2
         self.attrData = self.genRandomBytes(16)
-        return self
+        return self.attrData
 
     def getData(self):
         data = buffer(self)[:] + buffer(self.attrData)[:]
         return data
 
+    def getAttrData(self):
+        return self.attrData
+
+    def receiveSome(self, bytes):
+        if len(bytes) < sizeof(self):
+            raise IndexError
+
+        memmove(addressof(self), bytes, sizeof(self))
+
+        if len(bytes) < self.attrLen:
+            raise IndexError
+        dataBytes = bytes[sizeof(self): self.attrLen]
+        self.parseAttrData(dataBytes)
+
+    def parseAttrData(self, dataBytes):
+        self.attrData = (c_ubyte * (self.attrLen - 2))()
+        memmove(addressof(self.attrData), dataBytes, self.attrLen - 2)
+
 
     def genAttr(self, type):
+
         pass
+
+    def dumpAll(self):
+        for elem in self._fields_:
+            elemName = elem[0]
+            elemObj = getattr(self, elemName)
+            dumpFormat = "%-10s:0x%x"
+
+            if isinstance(getattr(self, elem[0]), Array):
+                arrayDump = "0x"
+                for byte in elemObj[:]:
+                    arrayDump += "%02x" % byte
+                print "%-10s:" % elemName, arrayDump
+            else:
+                print dumpFormat %(elemName, elemObj)
+
+
+        print "data: %r " % buffer(self.attrData)[:]
 
 
 if __name__ == '__main__':

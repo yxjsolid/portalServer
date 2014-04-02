@@ -2,38 +2,7 @@ import socket
 import portalProtocol
 from portalProtocol import Portal_Frame
 from time import sleep
-
-
-
-def mytest():
-    address = ('127.0.0.1', 50100)
-    address = ('10.103.12.6', 50100)
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.bind(address)
-
-    frame = Portal_Frame()
-
-    while True:
-        data, addr = s.recvfrom(2048)
-        if not data:
-            print "client has exist"
-            break
-        print "received:%r"%data, "from", addr
-
-        frame.receiveSome(data)
-
-        frame.dump()
-
-        newFrame = Portal_Frame(portalProtocol.ACK_CHALLENGE)
-
-
-        serverAddr = ('10.103.12.152', 50100)
-        s.sendto (newFrame.send(), serverAddr)			##Send packets
-
-        sleep(1)
-
-    s.close()
-
+from portalProtocol import *
 
 
 class portalDaemon():
@@ -48,14 +17,37 @@ class portalDaemon():
     def challengeAck(self, reqFrame):
 
         ackFrame = Portal_Frame(portalProtocol.ACK_CHALLENGE)
-        ackFrame.serialNo = reqFrame.serialNo
+        ackFrame.setSerialNo(reqFrame.serialNo)
+        ackFrame.genReqId()
+        challenge = ackFrame.genChallengeAck()
 
-        ackFrame.genChallengeAck()
-
+        self.lastChallenge = challenge
 
         print "set serialNo = %x \n" % ackFrame.serialNo
 
         self.doSend(ackFrame)
+
+    def handleAuthReq(self, reqFrame):
+
+        nameAttr = reqFrame.getAttr(ATTR_USERNAME)
+        chapPassAttr = reqFrame.getAttr(ATTR_CHAP_PASSWORD)
+
+        if nameAttr is None or chapPassAttr is None:
+            raise AttributeError
+
+        name = buffer(nameAttr.getAttrData())[:]
+        chapPass = buffer(chapPassAttr.getAttrData())[:]
+        challenge = buffer(self.lastChallenge)[:]
+
+        print "name: ", name
+        print "chap: ", chapPass
+        print "challenge", challenge
+
+        print binascii.b2a_hex(name)
+        print binascii.b2a_hex(chapPass)
+        print binascii.b2a_hex(challenge)
+
+        return
 
 
     def doSend(self, frame):
@@ -66,6 +58,30 @@ class portalDaemon():
             print '\x0D'
 
 
+    def notImplement(self, frame):
+        raise TypeError
+
+
+    def parseData(self, data):
+        frame = Portal_Frame()
+        frame.receiveSome(data)
+
+        func = {
+            REQ_CHALLENGE: self.challengeAck,
+            ACK_CHALLENGE: self.notImplement,
+            REQ_AUTH: self.handleAuthReq,
+            ACK_AUTH: self.notImplement,
+            REQ_LOGOUT: self.notImplement,
+            ACK_LOGOUT: self.notImplement,
+            AFF_ACK_AUTH: self.notImplement,
+            NTF_LOGOUT: self.notImplement,
+            REQ_INFO: self.notImplement,
+            ACK_INFO: self.notImplement}
+
+        func[frame.type](frame)
+        return
+
+
     def run(self):
         while True:
             data, addr = self.udpSocket.recvfrom(2048)
@@ -73,9 +89,7 @@ class portalDaemon():
                 print "client has exist"
                 break
 
-            frame = Portal_Frame()
-            frame.receiveSome(data)
-            self.challengeAck(frame)
+            self.parseData(data)
             sleep(1)
 
 
