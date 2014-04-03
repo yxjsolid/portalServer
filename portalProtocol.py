@@ -218,7 +218,7 @@ class Portal_Attr(Structure):
         return
 
     def isType(self, type):
-        return (self.attrType == type)
+        return self.attrType == type
 
     def getAttrLen(self):
         return self.attrLen
@@ -227,6 +227,9 @@ class Portal_Attr(Structure):
         self.attrType = ATTR_USERNAME
         self.attrLen = len(usrName) + 2
         self.attrData = usrName
+
+        print "self.attrData %r"%self.attrData, self.attrData
+        print "####### name = %r"%usrName, usrName, type(usrName)
 
     def genChapPassMD5(self, chapId, password, challenge):
         data1 = buffer(challenge)[:]
@@ -241,9 +244,6 @@ class Portal_Attr(Structure):
         print "chall:", binascii.b2a_hex(buffer(challenge)[:])
 
         digest = binascii.a2b_hex(digest)
-
-        #raise EOFError
-
         return digest
 
     def genChapPassAttr(self, chapId, password, challenge):

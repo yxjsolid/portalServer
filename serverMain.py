@@ -87,6 +87,11 @@ class formtest:
 
 def doAuth(userName, password):
 
+    userName = userName.encode("utf8")
+    password = password.encode("utf8")
+
+    print "userName = %r password = %r" % (userName, password)
+
     myCfg = myRadiusConfig()
     acip = myCfg.ACIP
     portalPort = myCfg.portalPort
@@ -113,45 +118,29 @@ class index():
         f = login()
         if f.validates():
             print f.d
+        else:
+            raise TypeError
 
         userName = f.d.txtName
         password = f.d.txtPassword
 
-        print userName, password
+        print "usr:%r  pass:%r " %(userName, password)
 
         doAuth(userName, password)
 
         #return self.render.radius(myRadiusConfig())
         return self.render.radius()
 
-
-        #return "Hello, world!"
-
 if __name__ == "__main__":
-
-    #
-    # port = "50100"
-    # serverIp = "10.103.12.6"
-    # myIp = '10.103.12.152'
-    #
-    # client = portalClient(myIp, serverIp, port)
-    # ret = client.doAuth(testUser, testPass)
-
-
-
-
-
-    print "test"
     urls = (
         '/radius.html', 'index',
         '/form.html', "formtest"
     )
+    global radiusCfg
 
     radiusCfg = myRadiusConfig()
 
-    global radiusCfg
-    print globals()
-
+    #print globals()
 
     app = web.application(urls, globals())
     app.internalerror = web.debugerror

@@ -68,7 +68,7 @@ class portalClient():
     def doChallenge(self):
         frame = Portal_Frame(portalProtocol.REQ_CHALLENGE)
 
-        print "%x" % frame.serialNo
+        print "send challenge request "
 
         newFrame = self.doSendReq(frame)
         ret = self.receiveChallengeAck(newFrame)
@@ -112,6 +112,8 @@ class portalClient():
         authReq.appendAttr(nameAttr)
         authReq.appendAttr(chapPassAttr)
 
+
+        print "\n\n\n\n send auth request"
 
         newFrame = self.doSendReq(authReq)
 
