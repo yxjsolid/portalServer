@@ -21,13 +21,18 @@ class portalDaemon():
         self.sharedSecret = secret
         pass
 
-    def challengeAck(self, reqFrame):
+    def doRadiusAuth(self, name, id, chall, chappass ):
+        radClient = portalRadiusClient(radiusServer, shardSecret)
+        ret = radClient.doAuth(name, id, chall, chappass)
+        return ret
+
+
+    def handleChallengeAck(self, reqFrame):
 
         ret = reqFrame.validateAuthenticator(None, self.sharedSecret)
         if ret is False:
             print "challenge req valid failed"
             return False
-
 
         ackFrame = Portal_Frame(portalProtocol.ACK_CHALLENGE)
         ackFrame.setSerialNo(reqFrame.serialNo)
@@ -40,10 +45,6 @@ class portalDaemon():
         ackFrame.genAuthenticator(reqFrame.getAuthenticator(), self.sharedSecret)
         self.doSend(ackFrame)
 
-    def doRadiusAuth(self, name, id, chall, chappass ):
-        radClient = portalRadiusClient(radiusServer, shardSecret)
-        ret = radClient.doAuth(name, id, chall, chappass)
-        return ret
 
     def handleAuthReq(self, reqFrame):
 
@@ -81,6 +82,15 @@ class portalDaemon():
         self.sendAuthAck(reqFrame, ret)
         return ret
 
+
+    def handleLogoutReq(self, frame):
+        print "handle Logout Req"
+        return True
+
+    def handleAffAuthAck(self, frame):
+        print "handleAffAuthAck"
+        return True
+
     def sendAuthAck(self, reqFrame, ret):
         ackFrame = Portal_Frame(portalProtocol.ACK_AUTH)
         ackFrame.setSerialNo(reqFrame.getSerialNo())
@@ -94,7 +104,7 @@ class portalDaemon():
         ackFrame.genAuthenticator(reqFrame.getAuthenticator(), self.sharedSecret)
 
         print "\n\n\n\n####### send auth ack###########"
-
+        
         self.doSend(ackFrame)
         print "####### send auth ack done"
 
@@ -106,6 +116,7 @@ class portalDaemon():
             print '\x0D'
 
     def notImplement(self, frame):
+        print "notImplement"
         raise TypeError
 
     def parseData(self, data):
@@ -113,13 +124,13 @@ class portalDaemon():
         frame.receiveSome(data)
 
         func = {
-            REQ_CHALLENGE: self.challengeAck,
+            REQ_CHALLENGE: self.handleChallengeAck,
             ACK_CHALLENGE: self.notImplement,
             REQ_AUTH: self.handleAuthReq,
             ACK_AUTH: self.notImplement,
-            REQ_LOGOUT: self.notImplement,
+            REQ_LOGOUT: self.handleLogoutReq,
             ACK_LOGOUT: self.notImplement,
-            AFF_ACK_AUTH: self.notImplement,
+            AFF_ACK_AUTH: self.handleAffAuthAck,
             NTF_LOGOUT: self.notImplement,
             REQ_INFO: self.notImplement,
             ACK_INFO: self.notImplement}
@@ -135,7 +146,6 @@ class portalDaemon():
                 break
 
             self.parseData(data)
-            sleep(1)
 
 
 

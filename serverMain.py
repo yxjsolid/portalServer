@@ -96,10 +96,13 @@ def doAuth(userName, password):
     acip = myCfg.ACIP
     portalPort = myCfg.portalPort
 
-    client = portalClient(myPortalServerIp, acip, portalPort)
-    ret = client.doAuth(userName, password)
+    client = portalClient(myPortalServerIp, acip, portalPort, Portal_sharedSecret)
+    ret = client.run(userName, password)
 
-    return ret
+    if ret is STAT_SUCCESS:
+        return True
+    else:
+        return False
 
 
 class index():

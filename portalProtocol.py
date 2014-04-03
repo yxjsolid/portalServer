@@ -52,7 +52,7 @@ class Portal_Frame(Structure):
                 ("attrNum",     c_ubyte),
                 ("authenticator", c_ubyte * 16)]
 
-    _dictSerialNo_ ={}
+
     _dictReqID_ ={}
 
     def __init__(self, type=REQ_CHALLENGE):
@@ -208,17 +208,6 @@ class Portal_Frame(Structure):
                 break
         pass
 
-    def genSerialNo(self):
-        while True:
-            serialNo = random.randint(1, 0xffff)
-            if str(serialNo) in self.__class__._dictSerialNo_:
-                print "hasKey"
-            else:
-                self.__class__._dictSerialNo_[str(serialNo)] = 1
-                self.setSerialNo(serialNo)
-
-                break
-        pass
 
     def setSerialNo(self, serialNo):
         self.serialNo = serialNo
