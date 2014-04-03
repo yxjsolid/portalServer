@@ -8,17 +8,26 @@ from radiusClient import *
 radiusServer = "10.103.12.152"
 shardSecret = "password"
 
+Portal_sharedSecret =  "shared"
 
 class portalDaemon():
-    def __init__(self, clientIp, serverIp, port):
+    def __init__(self, clientIp, serverIp, port, secret):
         self.server = (serverIp, port)
         self.client = (clientIp, port)
 
         self.udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udpSocket.bind(self.client)
+
+        self.sharedSecret = secret
         pass
 
     def challengeAck(self, reqFrame):
+
+        ret = reqFrame.validateAuthenticator(None, self.sharedSecret)
+        if ret is False:
+            print "challenge req valid failed"
+            return False
+
 
         ackFrame = Portal_Frame(portalProtocol.ACK_CHALLENGE)
         ackFrame.setSerialNo(reqFrame.serialNo)
@@ -28,6 +37,7 @@ class portalDaemon():
 
         print "set serialNo = %x \n" % ackFrame.serialNo
 
+        ackFrame.genAuthenticator(reqFrame.getAuthenticator(), self.sharedSecret)
         self.doSend(ackFrame)
 
     def doRadiusAuth(self, name, id, chall, chappass ):
@@ -36,6 +46,11 @@ class portalDaemon():
         return ret
 
     def handleAuthReq(self, reqFrame):
+
+        ret = reqFrame.validateAuthenticator(None, self.sharedSecret)
+        if ret is False:
+            print "auth req valid failed"
+            return False
 
         reqId = reqFrame.getReqID()
         nameAttr = reqFrame.getAttr(ATTR_USERNAME)
@@ -76,7 +91,12 @@ class portalDaemon():
         else:
             ackFrame.setErrorCode(CODE_REJECT)
 
+        ackFrame.genAuthenticator(reqFrame.getAuthenticator(), self.sharedSecret)
+
+        print "\n\n\n\n####### send auth ack###########"
+
         self.doSend(ackFrame)
+        print "####### send auth ack done"
 
     def doSend(self, frame):
         try:
@@ -104,7 +124,7 @@ class portalDaemon():
             REQ_INFO: self.notImplement,
             ACK_INFO: self.notImplement}
 
-        func[frame.type](frame)
+        ret = func[frame.type](frame)
         return
 
     def run(self):
@@ -127,7 +147,7 @@ if __name__ == '__main__':
     myIp = '10.103.12.6'
 
 
-    daemon = portalDaemon(myIp, serverIp, port)
+    daemon = portalDaemon(myIp, serverIp, port, Portal_sharedSecret)
 
     daemon.run()
 

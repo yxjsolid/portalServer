@@ -110,7 +110,7 @@ class index():
 
         print "get"
         #return self.render.radius(myRadiusConfig())
-        return self.render.radius()
+        return self.render.radius(None)
 
     def POST(self):
         print "post"
@@ -126,10 +126,10 @@ class index():
 
         print "usr:%r  pass:%r " %(userName, password)
 
-        doAuth(userName, password)
+        ret = doAuth(userName, password)
 
         #return self.render.radius(myRadiusConfig())
-        return self.render.radius()
+        return self.render.radius(ret)
 
 if __name__ == "__main__":
     urls = (

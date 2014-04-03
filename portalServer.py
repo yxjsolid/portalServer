@@ -10,87 +10,138 @@ from portalProtocol import *
 
 testUser = "test"
 testPass = "password"
+Portal_sharedSecret =  "shared"
+
+TIMEOUT_CHALLENGE = 5
+TIMEOUT_AUTH = 5
 
 class portalClient():
-    def __init__(self, clientIp, serverIp, port):
+    def __init__(self, clientIp, serverIp, port, secret):
         self.server = (serverIp, int(port))
         self.client = (clientIp, int(port))
 
         self.udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.udpSocket.bind(self.client)
+        #self.udpSocket.setblocking(0)
+
+        self.sharedSecret = secret
         self.usrName = None
         self.password = None
+        self.reqId = None
+        self.challenge = None
 
-        pass
-
-    def doAuth(self):
-        pass
-
-
-    def doReceive(self):
-        ready = select.select([self.udpSocket], [], [], 2)
+    def doReceive(self, timeout):
+        self.udpSocket.setblocking(1)
+        print "timeout ", timeout
+        ready = select.select([self.udpSocket], [], [], timeout)
 
         if ready[0]:
-            data = self.udpSocket.recv(4096)
-
-            print "receive data len = ", len(data)
-
-            newFrame = Portal_Frame(portalProtocol.ACK_CHALLENGE)
-            newFrame.receiveSome(data)
-
-            return newFrame
-
+            try:
+                data = self.udpSocket.recv(4096)
+                # print "receive data len = ", len(data)
+                newFrame = Portal_Frame()
+                newFrame.receiveSome(data)
+                return newFrame
+            except:
+                #icmp unreachable received
+                return None
         else:
-            print "\n\n######### timeout #######\n\n"
+            print "\n######### receive timeout #######\n"
             return None
 
 
-    def doSendReq(self, frame):
+    def doSendReq(self, frame, timeout):
         try:
-
-            print "send data:", frame.getFrameData()
-
-            self.udpSocket.sendto(frame.getFrameData(), self.server)			##Send packets
-        except KeyboardInterrupt:									##On Ctrl+C, print new line and break
+            # print "send data:", frame.getFrameData()
+            self.udpSocket.sendto(frame.getFrameData(), self.server)
+        except KeyboardInterrupt:
             ##os.system('cls')
+            print sys.exc_info()
             print '\x0D'
 
-        newFrame = self.doReceive()
-        newFrame.dumpAll()
+        newFrame = self.doReceive(timeout)
+        # if newFrame is not None:
+        #     # newFrame.dumpAll()
+        #     # print "getAuthenticator:", [buffer(newFrame.getAuthenticator())[:]]
+
         return newFrame
 
     def doAuth(self, usrName, password):
         self.usrName = usrName
         self.password = password
+        self.status = REQ_CHALLENGE
 
-        return self.doChallenge()
 
-    def doChallenge(self):
-        frame = Portal_Frame(portalProtocol.REQ_CHALLENGE)
+        print "\n\n"
+        print "############ doAuthReq doChallenge ############"
+        ret = self.doChallengeReq()
+        print "doChallenge done "
 
-        print "send challenge request "
+        if ret is False:
+            return False
 
-        newFrame = self.doSendReq(frame)
-        ret = self.receiveChallengeAck(newFrame)
+
+        print "\n\n"
+        print "############ doAuthReq ############"
+        ret = self.doAuthReq()
+        print "doAuthReq done"
+
         return ret
 
-    def receiveChallengeAck(self, frame):
-        print "serino", frame.getSerialNo()
-        print "reqID %x " % frame.getReqID()
+    def parseChallengeAck(self, reqFrame, ackFrame):
+        # print "serino", frame.getSerialNo()
+        # print "reqID %x " % frame.getReqID()
+        if ackFrame is None:
+            print "challenge Ack not received"
+            return False
 
-        attr = frame.getAttr(ATTR_CHALLENGE)
+        ret = ackFrame.validateAuthenticator(reqFrame.getAuthenticator(), self.sharedSecret)
+        if ret is False:
+            print "challenge Ack validate failed"
+            return False
+
+        self.reqId = ackFrame.getReqID()
+        attr = ackFrame.getAttr(ATTR_CHALLENGE)
         if attr:
-            challenge = attr.getAttrData()
-            print "receiveChallengeAck", challenge
+            self.challenge = attr.getAttrData()
+            # print "receiveChallengeAck", self.challenge
         else:
             raise ValueError
 
-        ret = self.doAuthReq(frame.getReqID(), self.usrName, self.password, challenge)
+        return True
 
+    def doChallengeReq(self):
+        reqFrame = Portal_Frame(portalProtocol.REQ_CHALLENGE)
+        reqFrame.genAuthenticator(None, self.sharedSecret)
+
+        print "challenge auth:",[buffer(reqFrame.getAuthenticator())[:]]
+
+        ackFrame = self.doSendReq(reqFrame, TIMEOUT_CHALLENGE)
+        ret = self.parseChallengeAck(reqFrame, ackFrame)
         return ret
 
+    def parseAuthAck(self, reqFrame, ackFrame):
 
-    def doAuthReq(self, reqId, usrName, usrPass, challenge):
+        if ackFrame is None:
+            print "auth ack not received"
+            return False
+
+        ret = ackFrame.validateAuthenticator(reqFrame.getAuthenticator(), self.sharedSecret)
+        if ret is False:
+            print "auth Ack validate failed"
+            return False
+
+        if ackFrame.getErrorCode() == CODE_SUCCESS:
+            return True
+        else:
+            return False
+
+    def doAuthReq(self):
+        reqId = self.reqId
+        usrName = self.usrName
+        usrPass = self.password
+        challenge = self.challenge
+
         nameAttr = Portal_Attr()
         nameAttr.genUserNameAttr(usrName)
 
@@ -98,35 +149,24 @@ class portalClient():
         reqIdBuff = (c_ubyte * 2)()
         memmove(addressof(reqIdBuff), addressof(reqtmp), 2)
 
-        print "reqtmp" ,reqtmp
-        print "reqIdBuff", reqIdBuff[0]
-        print "reqIdBuff", reqIdBuff[1]
+        # print "reqtmp" ,reqtmp
+        # print "reqIdBuff", reqIdBuff[0]
+        # print "reqIdBuff", reqIdBuff[1]
 
         chapPassAttr = Portal_Attr()
         chapPassAttr.genChapPassAttr(reqIdBuff[1], usrPass, challenge)
 
+        reqFrame = Portal_Frame(portalProtocol.REQ_AUTH)
+        reqFrame.genSerialNo()
+        reqFrame.setReqID(reqId)
+        reqFrame.appendAttr(nameAttr)
+        reqFrame.appendAttr(chapPassAttr)
 
-        authReq = Portal_Frame(portalProtocol.REQ_AUTH)
-        authReq.genSerialNo()
-        authReq.setReqID(reqId)
-        authReq.appendAttr(nameAttr)
-        authReq.appendAttr(chapPassAttr)
+        reqFrame.genAuthenticator(None, self.sharedSecret)
 
-
-        print "\n\n\n\n send auth request"
-
-        newFrame = self.doSendReq(authReq)
-
-        ret = self.receiveAuthAck(newFrame)
+        ackFrame = self.doSendReq(reqFrame, TIMEOUT_AUTH)
+        ret = self.parseAuthAck(reqFrame, ackFrame)
         return ret
-
-
-    def receiveAuthAck(self, frame):
-        if frame.getErrorCode() == CODE_SUCCESS:
-            return True
-        else:
-            return False
-
 
 
 
@@ -135,7 +175,7 @@ if __name__ == '__main__':
     serverIp = "10.103.12.6"
     myIp = '10.103.12.152'
 
-    client = portalClient(myIp, serverIp, port)
+    client = portalClient(myIp, serverIp, port, Portal_sharedSecret)
     ret = client.doAuth(testUser, testPass)
 
     if ret:

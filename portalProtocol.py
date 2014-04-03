@@ -89,9 +89,8 @@ class Portal_Frame(Structure):
             raise IndexError
 
         memmove(addressof(self), bytes, sizeof(self))
-        print "attrNum = ", self.attrNum
 
-        attrBytes = bytes[sizeof(self) :]
+        attrBytes = bytes[sizeof(self):]
         self.parseAttr(attrBytes)
 
     def parseAttr(self, attrBytes):
@@ -100,7 +99,7 @@ class Portal_Frame(Structure):
         while len(attrBytes) > 0:
             attr = Portal_Attr()
             attr.receiveSome(attrBytes)
-            attr.dumpAll()
+            # attr.dumpAll()
 
             #dataTotalLen -= attr.getAttrLen()
             attrBytes = attrBytes[attr.getAttrLen():]
@@ -140,6 +139,54 @@ class Portal_Frame(Structure):
     def dumpAttr(self):
 
         pass
+
+    def isAuthenticatorMatch(self, auth1, auth2):
+        # print "auth1:", [buffer(auth1)[:]]
+        # print "auth2:", [buffer(auth2)[:]]
+
+
+        if buffer(auth1)[:] == buffer(auth2)[:]:
+            # print "Match"
+            return True
+        else:
+            # print "mismatch"
+            return False
+
+
+    def validateAuthenticator(self, authIn, secret):
+        authIdSave = self.getAuthenticator()
+        self.genAuthenticator(authIn, secret)
+
+        if self.isAuthenticatorMatch(authIdSave, self.getAuthenticator()):
+            return True
+        else:
+            return False
+
+    def resetAuthenticator(self):
+        memset(addressof(self.authenticator), 0, sizeof(self.authenticator))
+
+    def getAuthenticator(self):
+        out = (c_ubyte * 16)()
+        memmove(out, self.authenticator, 16)
+        return out
+
+    def genAuthenticator(self, authIn, secret):
+        self.resetAuthenticator()
+        if authIn is not None:
+            memmove(addressof(self.authenticator), authIn, sizeof(self.authenticator))
+
+        frameData = self.getFrameData()
+
+        m = hashlib.md5()
+        m.update(frameData)
+        m.update(secret)
+        digest = m.digest()
+
+        # print "digets1", digest,  len(digest)
+        memmove(addressof(self.authenticator), digest, sizeof(self.authenticator))
+
+
+
 
     def getErrorCode(self):
         return self.errcode
@@ -227,9 +274,8 @@ class Portal_Attr(Structure):
         self.attrType = ATTR_USERNAME
         self.attrLen = len(usrName) + 2
         self.attrData = usrName
-
-        print "self.attrData %r"%self.attrData, self.attrData
-        print "####### name = %r"%usrName, usrName, type(usrName)
+        # print "self.attrData %r"%self.attrData, self.attrData
+        # print "####### name = %r"%usrName, usrName, type(usrName)
 
     def genChapPassMD5(self, chapId, password, challenge):
         data1 = buffer(challenge)[:]
@@ -239,9 +285,9 @@ class Portal_Attr(Structure):
         m.update(password)
         m.update(data1)
         digest = m.hexdigest()
-        print "chapId:%x" % chapId
-        print "chapPassword:", digest
-        print "chall:", binascii.b2a_hex(buffer(challenge)[:])
+        # print "chapId:%x" % chapId
+        # print "chapPassword:", digest
+        # print "chall:", binascii.b2a_hex(buffer(challenge)[:])
 
         digest = binascii.a2b_hex(digest)
         return digest

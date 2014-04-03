@@ -1,9 +1,18 @@
+$def with (authResult)
+
 $code:
     logo = radiusCfg.logo
     ip = ""
     myRadiusServer = radiusCfg.myRadiusServer
-
-
+    if authResult is not None:
+        if authResult == True:
+            #authResultTxt = "success"
+            #authResultTxt = "<font color=""green""><b>Credentials Accepted.</b></font><br>Session Lifetime: " & round(sessTimer/60) & " minutes.<br>Idle Timer: " & round(idleTimer/60) & " minutes."
+            authResultTxt = '<font color=""green""><b>Credentials Accepted.</b></font><br>Session Lifetime: " 100 " minutes.<br>Idle Timer: " 100 " minutes.'
+        else:
+            authResultTxt =  '<font color=""Red""><b>Credentials Rejected.</b></font><br>Please enter a valid username and password. '
+    else:
+        authResultTxt = ""
 
 <STYLE>
 body {
@@ -93,7 +102,7 @@ function onSubmit(){
 		<td width="40%"><span id="valTxtPassword" style="color:Red;visibility:hidden;">Please enter your password.</span></td>
 	</tr>
 	<tr>
-		<td></td><td><span id="authResult"></span>&nbsp</td>
+		<td></td><td><span id="authResult"></span>$:authResultTxt</td>
 	</tr>
 	<tr>
 		<td></td>
@@ -103,10 +112,10 @@ function onSubmit(){
 		</td>
 	</tr>
 	<tr>
-		<td colspan=2><asp:Label id=LHMResult runat="server" /></td>
+		<td colspan=2><Label id=LHMResult/></td>
 	</tr>
 	<tr>
-		<td colspan=2><asp:Label id=catchError runat="server" /></td>
+		<td colspan=2><Label id=catchError/></td>
 	</tr>
 </table>
 </form>
