@@ -30,12 +30,10 @@ NTF_LOGOUT = 0x08
 REQ_INFO = 0x09
 ACK_INFO = 0x0a
 
-
-
 CODE_SUCCESS = 0
 CODE_REJECT = 1
 CODE_CONNECTED = 2
-CODE_NEED_RETRY = 4
+CODE_NEED_RETRY = 3
 CODE_FAILED = 4
 
 
@@ -68,8 +66,6 @@ class Portal_Frame(Structure):
         #print self.reqID
 
         return
-
-
 
     def testFame(self):
         self.ver = 1

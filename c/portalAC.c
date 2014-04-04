@@ -9,7 +9,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h> /*for struct sockaddr_in*/
 
-int handlePortalPacket(uint8 *pktIn, int inPktSize, uint8 *pSendBuffer, int *pSendLen);
 
 #define DEST_IP   "10.103.12.152"
 #define DEST_PORT 50100
@@ -79,6 +78,7 @@ int doSocket()
 	{
 		uint8 sendBuffer[1024];
 		int sendLen = 0;
+		int ret = 0;
 		
 		res = recv(sockfd, pktIn, 2048, 0);
 		if (res == -1)
@@ -89,105 +89,16 @@ int doSocket()
 		printf("received data = %d \n", res);
 
 		memset(sendBuffer, 0, sizeof(sendBuffer));
-		handlePortalPacket(pktIn, res, sendBuffer, &sendLen);
+		ret = handlePortalPacket(pktIn, res, sendBuffer, &sendLen);
 
-
-		doSend(sockfd, &server_addr, sendBuffer, sendLen);
+		if (ret)
+		{
+			doSend(sockfd, &server_addr, sendBuffer, sendLen);
+		}
 	}
 }
 
 
-PortalAttr * createAttr(PortalAttrType type, uint8 *pData, int dataSize)
-{
-	PortalAttr *pAttr;
-
-	pAttr = SWMALLOC(dataSize + sizeof(PortalAttr));
-	if (!pAttr)
-	{
-		printf("%s --> out memory \n", __FUNCTION__);
-		return NULL;
-	}
-
-	pAttr->attrType = type;
-	pAttr->attrLen = dataSize + sizeof(PortalAttr);
-	memcpy(pAttr->attrData, pData, dataSize);
-
-	return pAttr;
-}
-
-PortalAttr * createChallengeAttr(void)
-{
-	uint8 challenge[16];
-	int i = 0;
-
-	for( i = 0; i < 16; i++)
-	{
-		challenge[i] = 0xaa + i;
-	}
-	
-	return createAttr(ATTR_CHALLENGE, challenge, 16);
-}
-
-
-int handleChallengeReq(uint8 *pktIn, int pktSize, uint8 *sendBuffer, int *sendLen)
-{
-	
-	PortalFrame *reqPkt = NULL;
-	PortalFrame *ackPkt = NULL;
-	PortalAttr *pAttr = NULL;
-
-	if (!sendBuffer)
-	{
-		printf("%s --> sendBuffer is null \n", __FUNCTION__);
-		return 0;
-	}
-
-	reqPkt = (PortalFrame *)pktIn;
-	ackPkt = (PortalFrame *)sendBuffer;
-
-
-	ackPkt->type = ACK_CHALLENGE;
-	ackPkt->serialNo = reqPkt->serialNo;
-	ackPkt->reqID = 0x1234;
-	ackPkt->attrNum = 1;
-	
-	pAttr = createChallengeAttr();
-
-	if (!pAttr)
-	{
-		return 0;
-	}
-	memcpy(ackPkt->attr, pAttr, pAttr->attrLen);
-	*sendLen = sizeof(PortalFrame) + pAttr->attrLen;
-
-	SWFREE(pAttr);
-
-	return 1;
-}
-
-int handlePortalPacket(uint8 *pktIn, int inPktSize, uint8 *pSendBuffer, int *pSendLen)
-{
-	PortalFrameType pktType;
-
-	if (inPktSize < sizeof(PortalFrame))
-	{
-		printf(" data size error\n");
-		return 0;
-	}
-
-	pktType = ((PortalFrame *)pktIn)->type;
-	switch(pktType)
-	{
-		case REQ_CHALLENGE:
-			handleChallengeReq(pktIn, inPktSize, pSendBuffer, pSendLen);
-			break;
-	}
-	
-
-	return 1;
-
-
-}
 
 
 int main()

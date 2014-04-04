@@ -10,7 +10,7 @@ from portalProtocol import *
 
 testUser = "test"
 testPass = "password"
-Portal_sharedSecret =  "shared"
+Portal_sharedSecret = "shared"
 
 TIMEOUT_CHALLENGE = 5
 TIMEOUT_AUTH = 5
@@ -130,6 +130,7 @@ class portalClient():
         f = Portal_Frame(portalProtocol.REQ_LOGOUT)
         f.setReqID(self.reqId)
         f.setSerialNo(self.getSerialNo())
+        f.setErrorCode(1)
         f.genAuthenticator(None, self.sharedSecret)
         self.doSendReq(f)
 
@@ -205,7 +206,7 @@ class portalClient():
         # print "reqIdBuff", reqIdBuff[1]
 
         chapPassAttr = Portal_Attr()
-        chapPassAttr.genChapPassAttr(reqIdBuff[1], usrPass, challenge)
+        chapPassAttr.genChapPassAttr(reqIdBuff[0], usrPass, challenge)
 
         reqFrame = Portal_Frame(portalProtocol.REQ_AUTH)
         reqFrame.setSerialNo(self.genSerialNo())

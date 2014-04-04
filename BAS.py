@@ -77,7 +77,7 @@ class portalDaemon():
         reqtmp = c_ushort(reqId)
         reqIdBuff = (c_ubyte * 2)()
         memmove(addressof(reqIdBuff), addressof(reqtmp), 2)
-        ret = self.doRadiusAuth(name, chr(reqIdBuff[1]), challenge, chapPass)
+        ret = self.doRadiusAuth(name, chr(reqIdBuff[0]), challenge, chapPass)
 
         self.sendAuthAck(reqFrame, ret)
         return ret
