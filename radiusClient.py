@@ -19,7 +19,7 @@ class portalRadiusClient():
 
         req = self.client.CreateAuthPacket(User_Name=userName)
 
-        req.authenticator = challengeStr
+        #req.authenticator = challengeStr
         req["CHAP-Challenge"] = challengeStr
         req["CHAP-Password"] = identStr + chapPassStr
 

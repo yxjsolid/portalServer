@@ -6,10 +6,13 @@ from time import sleep
 import select
 import portalProtocol
 from portalProtocol import *
+import struct
 
-
-testUser = "test"
+testUser = "xyang"
 testPass = "password"
+
+#testUser = "a"
+#testPass = "a"
 Portal_sharedSecret = "shared"
 
 TIMEOUT_CHALLENGE = 5
@@ -84,9 +87,16 @@ class portalClient():
 
 
 
-    def run(self, usrName, password):
+
+
+    def run(self, userIpStr, usrName, password):
         self.usrName = usrName
         self.password = password
+        self.userIp = socket.ntohl(struct.unpack("I",socket.inet_aton(userIpStr))[0])
+
+
+
+
 
         ret = self.doAuth()
 
@@ -97,6 +107,20 @@ class portalClient():
             self.sendSuccess()
 
         return ret
+
+    def doLogout(self):
+
+        reqFrame = Portal_Frame(portalProtocol.REQ_LOGOUT)
+        reqFrame.setUserIp(self.userIp)
+        reqFrame.setSerialNo(self.genSerialNo())
+
+        reqFrame.errcode = 1
+        print "\n\n $$$$$$$$$ doLogout, errorcode = ", reqFrame.errcode
+        reqFrame.genAuthenticator(None, self.sharedSecret)
+        self.doSendReq(reqFrame)
+
+
+        pass
 
     def doAuth(self):
 
@@ -123,6 +147,7 @@ class portalClient():
         f = Portal_Frame(portalProtocol.AFF_ACK_AUTH)
         f.setReqID(self.reqId)
         f.setSerialNo(self.getSerialNo())
+        f.setUserIp(self.userIp)
         f.genAuthenticator(None, self.sharedSecret)
         self.doSendReq(f)
 
@@ -131,6 +156,7 @@ class portalClient():
         f.setReqID(self.reqId)
         f.setSerialNo(self.getSerialNo())
         f.setErrorCode(1)
+        f.setUserIp(self.userIp)
         f.genAuthenticator(None, self.sharedSecret)
         self.doSendReq(f)
 
@@ -148,6 +174,10 @@ class portalClient():
             print "challenge Ack validate failed"
             return STAT_FAILED
 
+        if ackFrame.getErrorCode() != CODE_SUCCESS:
+            print "challenge request failed, error= ", ackFrame.getErrorCode()
+            return STAT_FAILED
+
         self.reqId = ackFrame.getReqID()
         attr = ackFrame.getAttr(ATTR_CHALLENGE)
         if attr:
@@ -161,7 +191,9 @@ class portalClient():
     def doChallengeReq(self):
         reqFrame = Portal_Frame(portalProtocol.REQ_CHALLENGE)
         reqFrame.setSerialNo(self.genSerialNo())
+        reqFrame.setUserIp(self.userIp)
         reqFrame.genAuthenticator(None, self.sharedSecret)
+
 
         print "challenge auth:",[buffer(reqFrame.getAuthenticator())[:]]
 
@@ -209,10 +241,13 @@ class portalClient():
         chapPassAttr.genChapPassAttr(reqIdBuff[0], usrPass, challenge)
 
         reqFrame = Portal_Frame(portalProtocol.REQ_AUTH)
+        reqFrame.setUserIp(self.userIp)
         reqFrame.setSerialNo(self.genSerialNo())
         reqFrame.setReqID(reqId)
         reqFrame.appendAttr(nameAttr)
         reqFrame.appendAttr(chapPassAttr)
+
+        print "send auth req, self.userIp = %x"%self.userIp
 
         reqFrame.genAuthenticator(None, self.sharedSecret)
 
@@ -229,11 +264,12 @@ class portalClient():
 
 if __name__ == '__main__':
     port = "50100"
-    serverIp = "10.103.12.6"
+    serverIp = "10.103.12.154"
     myIp = '10.103.12.152'
+    userip = "3.3.3.4"
 
     client = portalClient(myIp, serverIp, port, Portal_sharedSecret)
-    ret = client.run(testUser, testPass)
+    ret = client.run(userip, testUser, testPass)
 
 
     if ret is STAT_SUCCESS:

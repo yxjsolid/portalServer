@@ -3,6 +3,7 @@ from ctypes import *
 import random
 import hashlib
 import binascii
+import socket
 
 # typedef struct PortalFrame
 # {
@@ -37,7 +38,8 @@ CODE_NEED_RETRY = 3
 CODE_FAILED = 4
 
 
-class Portal_Frame(Structure):
+class Portal_Frame(BigEndianStructure):
+#class Portal_Frame(Structure):
     _fields_ = [("ver",         c_ubyte),
                 ("type",        c_ubyte),
                 ("chap",        c_ubyte),
@@ -74,6 +76,9 @@ class Portal_Frame(Structure):
         print [buffer(self)[:]]
 
     def getFrameData(self):
+
+        #socket.htonl()
+        #socket.htons()
         data = buffer(self)[:]
         for attr in self.attrList:
             data += attr.getData()
@@ -178,7 +183,8 @@ class Portal_Frame(Structure):
         m.update(secret)
         digest = m.digest()
 
-        # print "digets1", digest,  len(digest)
+        print "digets1", digest,  len(digest)
+        print "digets1",  m.hexdigest()
         memmove(addressof(self.authenticator), digest, sizeof(self.authenticator))
 
 
@@ -204,6 +210,9 @@ class Portal_Frame(Structure):
                 break
         pass
 
+    def setUserIp(self, userIp):
+        self.userIp = userIp
+        print "setUserip = %x " % userIp
 
     def setSerialNo(self, serialNo):
         self.serialNo = serialNo

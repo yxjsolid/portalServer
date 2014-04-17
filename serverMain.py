@@ -7,6 +7,16 @@ from portalServer import *
 
 myPortalServerIp = "10.103.12.152"
 
+allClients = {}
+
+
+def doLogout(userIp):
+    global  allClients
+    client = allClients[userIp]
+
+    print client
+    client.doLogout()
+
 class myRadiusConfig():
     logoutPopup = True
     #Set the RADIUS server IP or Name
@@ -34,7 +44,7 @@ class myRadiusConfig():
     #Set the logo image to use
     logo = "static/sonicwall.gif"
 
-    ACIP = "10.103.12.6"
+    ACIP = "10.103.12.158"
     portalPort = "50100"
 
 login = form.Form(
@@ -85,11 +95,11 @@ class formtest:
             # extracting the validated arguments from the form.
             return "Grrreat success! boe: %s, bax: %s" % (f.d.boe, f['bax'].value)
 
-def doAuth(userName, password):
+def doAuth(userIp, userName, password):
 
     userName = userName.encode("utf8")
     password = password.encode("utf8")
-
+    userIpStr = userIp.encode("utf8")
     print "userName = %r password = %r" % (userName, password)
 
     myCfg = myRadiusConfig()
@@ -97,12 +107,47 @@ def doAuth(userName, password):
     portalPort = myCfg.portalPort
 
     client = portalClient(myPortalServerIp, acip, portalPort, Portal_sharedSecret)
-    ret = client.run(userName, password)
+    ret = client.run(userIpStr, userName, password)
 
     if ret is STAT_SUCCESS:
+        global allClients
+        allClients[userIpStr] = client
+
         return True
     else:
         return False
+
+class logout():
+    def __init__(self):
+        self.render = web.template.render('tmp/', globals={"radiusCfg":myRadiusConfig()})
+
+    def GET(self):
+
+        print "get"
+
+        print "web.rawinput()", web.ctx.fullpath
+        # print "web.input()", web.input()
+        print "web.data()", web.data()
+
+        #return self.render.radius(myRadiusConfig())
+        return self.render.logout(web.ctx.fullpath, 1, 2400)
+
+    def POST(self):
+        print "post"
+
+        # print "web.rawinput()", web.rawinput()
+        print "web.input()", web.input()
+        print "web.data()", web.data()
+
+
+        userIp = web.input().wlanuserip
+        print "post logout userip = ", userIp
+
+
+        doLogout(userIp)
+
+        #return self.render.radius(myRadiusConfig())
+        return self.render.logout(web.ctx.fullpath, 0, 0)
 
 
 class index():
@@ -112,11 +157,21 @@ class index():
     def GET(self):
 
         print "get"
+
+        print "web.rawinput()", web.ctx.fullpath
+        # print "web.input()", web.input()
+        print "web.data()", web.data()
+
         #return self.render.radius(myRadiusConfig())
-        return self.render.radius(None)
+        return self.render.radius(web.ctx.fullpath, None, None)
 
     def POST(self):
         print "post"
+
+       # print "web.rawinput()", web.rawinput()
+        print "web.input()", web.input()
+        print "web.data()", web.data()
+
 
         f = login()
         if f.validates():
@@ -126,17 +181,21 @@ class index():
 
         userName = f.d.txtName
         password = f.d.txtPassword
+        userIp = web.input().wlanuserip
 
         print "usr:%r  pass:%r " %(userName, password)
 
-        ret = doAuth(userName, password)
+        ret = doAuth(userIp, userName, password)
 
         #return self.render.radius(myRadiusConfig())
-        return self.render.radius(ret)
+        userIpf = userIp.encode("utf8")
+
+        return self.render.radius(web.ctx.fullpath, ret, userIp)
 
 if __name__ == "__main__":
     urls = (
         '/radius.html', 'index',
+        '/logout.html', 'logout',
         '/form.html', "formtest"
     )
     global radiusCfg

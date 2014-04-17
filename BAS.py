@@ -5,8 +5,11 @@ from time import sleep
 from portalProtocol import *
 from radiusClient import *
 
-radiusServer = "10.103.12.152"
-shardSecret = "password"
+radiusServer = "10.103.12.254"
+shardSecret = "shared"
+
+#radiusServer = "10.8.35.2"
+#shardSecret = "password"
 
 Portal_sharedSecret =  "shared"
 
@@ -154,7 +157,7 @@ class portalDaemon():
 if __name__ == '__main__':
     port = 50100
     serverIp = "10.103.12.152"
-    myIp = '10.103.12.6'
+    myIp = '10.103.12.154'
 
 
     daemon = portalDaemon(myIp, serverIp, port, Portal_sharedSecret)

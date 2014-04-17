@@ -1,4 +1,4 @@
-$def with (authResult)
+$def with (fullpath, authResult, userIp)
 
 $code:
     logo = radiusCfg.logo
@@ -9,9 +9,16 @@ $code:
             #authResultTxt = "success"
             #authResultTxt = "<font color=""green""><b>Credentials Accepted.</b></font><br>Session Lifetime: " & round(sessTimer/60) & " minutes.<br>Idle Timer: " & round(idleTimer/60) & " minutes."
             authResultTxt = '<font color=""green""><b>Credentials Accepted.</b></font><br>Session Lifetime: " 100 " minutes.<br>Idle Timer: " 100 " minutes.'
+            strLogoutPageFormat = "<script language='javascript'>window.open('logout.html?wlanuserip=%s', 'logout', 'toolbar=no, addressbar=no, menubar=no, width=400,height=250');</script>"
+            
+            strLogoutPage =  strLogoutPageFormat % userIp
+            
+            #strLogoutPage = "<script language='javascript'></script>"
         else:
+            strLogoutPage = ""
             authResultTxt =  '<font color=""Red""><b>Credentials Rejected.</b></font><br>Please enter a valid username and password. '
     else:
+        strLogoutPage = ""
         authResultTxt = ""
 
 <STYLE>
@@ -31,7 +38,7 @@ tr.heading {
 	background-color: #ffffff;
 }
 </STYLE>
-
+$:strLogoutPage
 
 <script type="text/javascript">
 //<![CDATA[
@@ -62,7 +69,7 @@ function onSubmit(){
 </HEAD>
 
 <BODY>
-<form id="frmValidator" method="post" action="radius.html">
+<form id="frmValidator" method="post" action="$fullpath">
 
 <table width="100%" border="0" cellpadding="2" cellspacing="0">
 	<tr class="heading">

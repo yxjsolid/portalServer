@@ -1,0 +1,216 @@
+$def with (fullpath, isLogin, sessionTime)
+
+$code:
+    logo = radiusCfg.logo
+    ip = ""
+    authResultTxt =""
+    myRadiusServer = radiusCfg.myRadiusServer
+    if isLogin is not None:
+        if isLogin == True:
+            pass
+        else:
+            authResultTxt = "<br><b><font color=""green"">Your session has been logged out.<br><br>Thank you for using LHM Guest Services.</font></b>"
+            pass
+    else:
+        isLogin = 0
+        sessionTime = 0
+        authResultTxt = "<br><b><font color=""green"">Your session has been logged out.<br><br>Thank you for using LHM Guest Services.</font></b>"
+
+<STYLE>
+body {
+	font-size: 10pt;
+	font-family: verdana,helvetica,arial,sans-serif;
+	color:#000000;
+	background-color:#9CBACE;
+}
+
+tr.heading {
+	font-size: 10pt;
+	background-color:#006699;
+}
+
+tr.smalltext {
+	font-size: 8pt;
+}
+
+.button {
+	border: 1px solid #000000;
+	background-color: #ffffff;
+	font-size: 8pt;
+}
+</STYLE>
+
+<HTML>
+<HEAD>
+<TITLE>LHM Logout Page</TITLE>
+
+<SCRIPT LANGUAGE="Javascript"> 
+
+//'Javascript Seconds Countdown Timer
+var SecondsToCountDown=$sessionTime;
+var originalTime="";
+function CountDown() 
+{ 
+	clockStr="";
+
+	dayStr=Math.floor(SecondsToCountDown/86400)%100000
+	if(dayStr>0){
+		if(dayStr>1){
+			dayStr+=" days ";
+		} else dayStr+=" day ";
+		clockStr=dayStr;
+	}
+	hourStr=Math.floor(SecondsToCountDown/3600)%24
+	if(hourStr>0){
+		if(hourStr>1){
+			hourStr+=" hours ";
+		} else hourStr+=" hour ";
+		clockStr+=hourStr;
+	}
+	minuteStr=Math.floor(SecondsToCountDown/60)%60
+	if(minuteStr>0){
+		if(minuteStr>1){
+			minuteStr+=" minutes ";
+		} else minuteStr+=" minute ";
+		clockStr+=minuteStr;
+	}
+	secondStr=Math.floor(SecondsToCountDown/1)%60
+	if(secondStr>0){	
+		if(secondStr>1){
+			secondStr+=" seconds ";
+		} else secondStr+=" second ";
+		clockStr+=secondStr;
+	}
+
+	if(SecondsToCountDown > 0)
+	{
+		--SecondsToCountDown;
+	}
+
+	if(originalTime.length < 2)
+	{
+		originalTime = clockStr;
+	}
+
+	// Make sure the form is still there before trying to set a value
+	if(document.frmValidator){
+		document.frmValidator.originalTime.value = originalTime;
+		document.frmValidator.countdown.value = clockStr;
+	}	
+	
+	setTimeout("CountDown()", 1000);
+	if(SecondsToCountDown == 0)
+	{ 
+		document.frmValidator.countdown.value = "Session Expired"; 
+	} 
+} 
+
+//'Disable right-click so that the window doesn't get refreshed since the countdown is clientside.
+document.oncontextmenu = disableRightClick;
+function disableRightClick()
+{
+	return true;
+  return false;
+}
+
+//'Disable F5 key, too, on IE at least.
+function noF5()
+{
+	var key_f5 = 116;        
+	
+	//alert("noF5");
+	return true;
+	//if (key_f5==event.keyCode)
+	{
+		//event.keyCode=0;
+		return false;
+	}
+	return false;
+}
+
+
+function onLoadFunc()
+{
+		var isUserLogin = $isLogin;
+		
+		if (isUserLogin)
+		{
+			loggedIn.style.display= "block";
+			loggedOut.style.display= "none";
+			
+			CountDown()
+		}
+		else
+		{
+			loggedIn.style.display= "none";
+			loggedOut.style.display= "block";
+		}
+}
+
+document.onkeydown=noF5;
+document.onmousedown=disableRightClick;
+
+</SCRIPT> 
+
+</HEAD>
+
+<BODY onload='onLoadFunc()'>
+<span id="loggedIn">
+<form id="frmValidator" name="frmValidator" method="post" action="$fullpath">
+<table width="100%" border="0" cellpadding="2" cellspacing="0">
+	<tr class="heading">
+		<td colspan=2 align="center">&nbsp</td>
+	</tr>
+	<tr class="heading">
+		<td colspan=2 align="center"><font color="white"><b>SonicWALL LHM Logout Window</b></font></td>
+	</tr>
+	<tr class="heading">
+		<td colspan=2 align="center">&nbsp</td>
+	</tr>
+	<tr class="smalltext"><td><br></td></tr>
+	<tr class="smalltext">
+		<td>Original Session Time:</td>
+		<td><input name="originalTime" type="text" id="originalTime" style="width:250px;"/></td>
+	</tr>
+	<tr class="smalltext">
+		<td>Remaining Session Time:</td>
+		<td><input name="countdown" type="text" id="countdown" style="width:250px;"/></td>
+	</tr>
+	<tr class="smalltext">
+		<td colspan=2><br>You may use this window to manually logout your session at any time, or you may safely close this window if you prefer to let your session timeout automatically.</font></td>
+	</td>
+	<tr>
+		<td colspan=2><center><input type="submit" value=" Logout " id="btnSubmit" class="button" text="  Logout  "/></center></td>
+	</tr>
+</table>
+</form>
+</span>
+
+<span id="loggedOut" runat="server">
+<form id="logout" runat="server">
+<table width="100%" border="0" cellpadding="2" cellspacing="0">
+	<tr class="heading">
+		<td colspan=2 align="center">&nbsp</td>
+	</tr>
+	<tr class="heading">
+		<td colspan=2 align="center"><font color="white"><b>SonicWALL LHM Logout Window</b></font></td>
+	</tr>
+	<tr class="heading">
+		<td colspan=2 align="center">&nbsp</td>
+	</tr>
+	<tr>
+		<td><Label id=LHMResult/>$:authResultTxt</td>
+	</tr>
+	<tr>
+		<td><Label id=catchError runat="server" /></td>
+	</tr>
+	<tr><td><br></td></tr>
+	<tr>
+		<td><center><input type="submit" value=" Close " id="Button1" class="button" onclick="self.close()"/></center></td>
+	</tr>
+</table>
+</form>
+</span>
+
+</BODY>
+</HTML>
