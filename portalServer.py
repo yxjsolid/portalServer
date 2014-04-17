@@ -7,7 +7,7 @@ import select
 import portalProtocol
 from portalProtocol import *
 import struct
-
+import threading
 testUser = "xyang"
 testPass = "password"
 
@@ -20,8 +20,9 @@ TIMEOUT_AUTH = 5
 
 STAT_FAILED = 0
 STAT_SUCCESS = 1
-STAT_CHALLENGE_TIMEOUT = 2
-STAT_AUTH_TIMEOUT = 3
+STAT_AUTH_DONE = 2
+STAT_CHALLENGE_TIMEOUT = 3
+STAT_AUTH_TIMEOUT = 4
 
 
 
@@ -29,14 +30,12 @@ class portalClient():
 
     _dictSerialNo_ = {}
 
-    def __init__(self, clientIp, serverIp, port, secret):
+    def __init__(self,userIpStr, serverIp, port, secret, receiver):
         self.server = (serverIp, int(port))
-        self.client = (clientIp, int(port))
+        self.userIp = socket.ntohl(struct.unpack("I", socket.inet_aton(userIpStr))[0])
+        self.threadEvent = threading.Event()
 
-        self.udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.udpSocket.bind(self.client)
-        #self.udpSocket.setblocking(0)
-
+        self.receiver = receiver
         self.sharedSecret = secret
         self.usrName = None
         self.password = None
@@ -44,8 +43,35 @@ class portalClient():
         self.challenge = None
         self.serialNo = None
 
+    def waitAckPkt(self, pktType, timeout):
+        self.waitPktType = pktType
+        self.newFrame = None
+        self.threadEvent.clear()
+        self.threadEvent.wait(timeout)
+
+        if self.newFrame != None:
+            #print "got new frame"
+            pass
+        else:
+            #print "timeout"
+            pass
+        return self.newFrame
+
+
+    def clientWakeup(self, frame):
+        if frame.type == self.waitPktType:
+            self.threadEvent.set()
+            self.newFrame = frame
+        else:
+            print "client recetive pkt type ", frame.type
+
     def getSerialNo(self):
         return self.serialNo
+
+
+    def debugGenSerialNo(self):
+        self.serialNo = 0x1
+        return 1
 
     def genSerialNo(self):
         while True:
@@ -58,25 +84,9 @@ class portalClient():
                 return serialNo
         pass
 
-
-    def doReceive(self, timeout):
-        #self.udpSocket.setblocking(1)
-        ready = select.select([self.udpSocket], [], [], timeout)
-
-        if ready[0]:
-            try:
-                data = self.udpSocket.recv(4096)
-                # print "receive data len = ", len(data)
-                return data
-            except:
-                #icmp unreachable received
-                return None
-        else:
-            print "\n######### receive timeout #######\n"
-            return None
-
-
     def doSendReq(self, frame):
+
+        self.udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
             # print "send data:", frame.getFrameData()
             self.udpSocket.sendto(frame.getFrameData(), self.server)
@@ -86,17 +96,10 @@ class portalClient():
             print '\x0D'
 
 
-
-
-
     def run(self, userIpStr, usrName, password):
         self.usrName = usrName
         self.password = password
         self.userIp = socket.ntohl(struct.unpack("I",socket.inet_aton(userIpStr))[0])
-
-
-
-
 
         ret = self.doAuth()
 
@@ -113,13 +116,9 @@ class portalClient():
         reqFrame = Portal_Frame(portalProtocol.REQ_LOGOUT)
         reqFrame.setUserIp(self.userIp)
         reqFrame.setSerialNo(self.genSerialNo())
-
-        reqFrame.errcode = 1
-        print "\n\n $$$$$$$$$ doLogout, errorcode = ", reqFrame.errcode
         reqFrame.genAuthenticator(None, self.sharedSecret)
         self.doSendReq(reqFrame)
-
-
+        ackFrame = self.waitAckPkt(ACK_LOGOUT, TIMEOUT_AUTH)
         pass
 
     def doAuth(self):
@@ -127,10 +126,16 @@ class portalClient():
         print "\n\n"
         print "############ doAuthReq doChallenge ############"
         ret = self.doChallengeReq()
-        print "doChallenge done "
+
+
+        if ret is STAT_AUTH_DONE:
+            return STAT_SUCCESS
 
         if ret is not STAT_SUCCESS:
+            print "doChallenge failed "
             return ret
+        else:
+            print "doChallenge done "
 
 
         print "\n\n"
@@ -160,21 +165,34 @@ class portalClient():
         f.genAuthenticator(None, self.sharedSecret)
         self.doSendReq(f)
 
-    def parseChallengeAck(self, reqFrame, ackData):
+    def parseChallengeAck(self, reqFrame, ackFrame):
         # print "serino", frame.getSerialNo()
         # print "reqID %x " % frame.getReqID()
-        if ackData is None:
+        # if ackData is None:
+        #     print "challenge Ack not received"
+        #     return STAT_CHALLENGE_TIMEOUT
+        #
+        #
+        #
+        # ackFrame = Portal_Frame()
+        # ackFrame.receiveSome(ackData)
+
+        if ackFrame is None:
             print "challenge Ack not received"
             return STAT_CHALLENGE_TIMEOUT
 
-        ackFrame = Portal_Frame()
-        ackFrame.receiveSome(ackData)
         ret = ackFrame.validateAuthenticator(reqFrame.getAuthenticator(), self.sharedSecret)
         if ret is False:
             print "challenge Ack validate failed"
             return STAT_FAILED
 
-        if ackFrame.getErrorCode() != CODE_SUCCESS:
+        errCode = ackFrame.getErrorCode()
+
+        if errCode == CODE_CONNECTED:
+            print "client alreay authed"
+            return STAT_AUTH_DONE
+
+        if errCode != CODE_SUCCESS:
             print "challenge request failed, error= ", ackFrame.getErrorCode()
             return STAT_FAILED
 
@@ -191,25 +209,22 @@ class portalClient():
     def doChallengeReq(self):
         reqFrame = Portal_Frame(portalProtocol.REQ_CHALLENGE)
         reqFrame.setSerialNo(self.genSerialNo())
+        #reqFrame.setSerialNo(self.debugGenSerialNo())
+
         reqFrame.setUserIp(self.userIp)
         reqFrame.genAuthenticator(None, self.sharedSecret)
 
-
-        print "challenge auth:",[buffer(reqFrame.getAuthenticator())[:]]
-
         self.doSendReq(reqFrame)
-        ackData = self.doReceive(TIMEOUT_CHALLENGE)
-        ret = self.parseChallengeAck(reqFrame, ackData)
+        ackFrame = self.waitAckPkt(ACK_CHALLENGE, TIMEOUT_CHALLENGE)
+        ret = self.parseChallengeAck(reqFrame, ackFrame)
         return ret
 
-    def parseAuthAck(self, reqFrame, ackData):
+    def parseAuthAck(self, reqFrame, ackFrame):
 
-        if ackData is None:
+        if ackFrame is None:
             print "auth ack not received"
             return STAT_AUTH_TIMEOUT
 
-        ackFrame = Portal_Frame()
-        ackFrame.receiveSome(ackData)
         ret = ackFrame.validateAuthenticator(reqFrame.getAuthenticator(), self.sharedSecret)
         if ret is False:
             print "auth Ack validate failed"
@@ -252,15 +267,68 @@ class portalClient():
         reqFrame.genAuthenticator(None, self.sharedSecret)
 
         self.doSendReq(reqFrame)
-        ackData = self.doReceive(TIMEOUT_AUTH)
+        ackFrame = self.waitAckPkt(ACK_AUTH, TIMEOUT_AUTH)
         # if newFrame is not None:
         #     # newFrame.dumpAll()
         #     # print "getAuthenticator:", [buffer(newFrame.getAuthenticator())[:]]
 
-        ret = self.parseAuthAck(reqFrame, ackData)
+        ret = self.parseAuthAck(reqFrame, ackFrame)
         return ret
 
 
+class PortalPacketReceiver (threading.Thread):
+    def __init__(self, port):
+        threading.Thread.__init__(self)
+
+        self.address = ('0.0.0.0', int(port))
+        self.udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udpSocket.bind(self.address)
+        self.clients = {}
+
+    def run(self):
+        #print "Starting " + "PortalPacketReceiver \n"
+        #threadLock.acquire()
+        #threadLock.release()class myThread (threading.Thread):
+        self.doReceive()
+
+    def handleData(self, pktData):
+        #print "pktData:", [pktData]
+        pkt = Portal_Frame()
+        pkt.receiveSome(pktData)
+        client = self.getClient(pkt.userIp)
+        if client:
+            client.clientWakeup(pkt)
+
+    def getClient(self, userIp):
+        if self.clients.has_key(userIp):
+            client = self.clients[userIp]
+            return client
+        else:
+            print "not found client ip :", userIp
+
+    def doReceive(self):
+        ready = select.select([self.udpSocket], [], [], None)
+        packetCnt = 0
+        #if ready[0]:
+        while True:
+            try:
+                data = self.udpSocket.recv(4096)
+                packetCnt += 1
+                print "total packets= ", packetCnt
+                self.handleData(data)
+            except:
+                print sys.exc_info()
+                print "\n\n\n xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                return None
+            # else:
+            #     print "\n######### receive timeout #######\n"
+            #     return None
+
+
+    def addClient(self, client):
+        self.clients[client.userIp] = client
+
+        print "reciever : all client:", self.clients
 
 if __name__ == '__main__':
     port = "50100"

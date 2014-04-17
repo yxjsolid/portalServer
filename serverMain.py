@@ -8,7 +8,7 @@ from portalServer import *
 myPortalServerIp = "10.103.12.152"
 
 allClients = {}
-
+udpSocket = None
 
 def doLogout(userIp):
     global  allClients
@@ -106,8 +106,13 @@ def doAuth(userIp, userName, password):
     acip = myCfg.ACIP
     portalPort = myCfg.portalPort
 
-    client = portalClient(myPortalServerIp, acip, portalPort, Portal_sharedSecret)
+    global udpSocket
+    global receiver
+    client = portalClient(userIpStr, acip, portalPort, Portal_sharedSecret, receiver)
+    receiver.addClient(client)
     ret = client.run(userIpStr, userName, password)
+
+
 
     if ret is STAT_SUCCESS:
         global allClients
@@ -188,8 +193,7 @@ class index():
         ret = doAuth(userIp, userName, password)
 
         #return self.render.radius(myRadiusConfig())
-        userIpf = userIp.encode("utf8")
-
+        userIp = userIp.encode("utf8")
         return self.render.radius(web.ctx.fullpath, ret, userIp)
 
 if __name__ == "__main__":
@@ -199,7 +203,13 @@ if __name__ == "__main__":
         '/form.html', "formtest"
     )
     global radiusCfg
+    global udpSocket
+    global receiver
 
+    receiver = PortalPacketReceiver(50100)
+    receiver.start()
+
+    print "aaaaaaaaaaaaaa"
     radiusCfg = myRadiusConfig()
 
     #print globals()
@@ -207,3 +217,4 @@ if __name__ == "__main__":
     app = web.application(urls, globals())
     app.internalerror = web.debugerror
     app.run()
+

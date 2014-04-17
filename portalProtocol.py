@@ -90,7 +90,6 @@ class Portal_Frame(BigEndianStructure):
             raise IndexError
 
         memmove(addressof(self), bytes, sizeof(self))
-
         attrBytes = bytes[sizeof(self):]
         self.parseAttr(attrBytes)
 
@@ -183,8 +182,7 @@ class Portal_Frame(BigEndianStructure):
         m.update(secret)
         digest = m.digest()
 
-        print "digets1", digest,  len(digest)
-        print "digets1",  m.hexdigest()
+        #print "digets1",  m.hexdigest()
         memmove(addressof(self.authenticator), digest, sizeof(self.authenticator))
 
 
@@ -212,7 +210,6 @@ class Portal_Frame(BigEndianStructure):
 
     def setUserIp(self, userIp):
         self.userIp = userIp
-        print "setUserip = %x " % userIp
 
     def setSerialNo(self, serialNo):
         self.serialNo = serialNo
