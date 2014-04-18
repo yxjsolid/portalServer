@@ -45,7 +45,7 @@ class myRadiusConfig():
     logo = "static/sonicwall.gif"
 
     ACIP = "10.103.12.158"
-    portalPort = "50100"
+    portalPort = "2000"
 
 login = form.Form(
     form.Textbox('txtName'),
@@ -206,7 +206,7 @@ if __name__ == "__main__":
     global udpSocket
     global receiver
 
-    receiver = PortalPacketReceiver(50100)
+    receiver = PortalPacketReceiver(2000)
     receiver.start()
 
     print "aaaaaaaaaaaaaa"
