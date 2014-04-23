@@ -1,4 +1,4 @@
-$def with (fullpath, authResult, userIp)
+$def with (fullpath, authResult, userIp, userName)
 
 $code:
     logo = radiusCfg.logo
@@ -100,7 +100,7 @@ function onSubmit(){
 
 	<tr>
 		<td width="30%"><br>Enter your login name:</td>
-		<td width="30%"><input name="txtName" type="text" id="txtName" /></td>
+		<td width="30%"><input name="txtName" type="text" value="$userName"id="txtName" /></td>
 		<td width="40%"><span id="valTxtName" style="color:Red;visibility:hidden;">Please enter your name.</span></td>
 	</tr>
 	<tr>

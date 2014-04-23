@@ -42,7 +42,7 @@ class Portal_Frame(BigEndianStructure):
 #class Portal_Frame(Structure):
     _fields_ = [("ver",         c_ubyte),
                 ("type",        c_ubyte),
-                ("chap",        c_ubyte),
+                ("isPap",        c_ubyte),
                 ("rsvd",        c_ubyte),
                 ("serialNo",    c_ushort),
                 ("reqID",       c_ushort),
@@ -211,6 +211,9 @@ class Portal_Frame(BigEndianStructure):
     def setUserIp(self, userIp):
         self.userIp = userIp
 
+    def setAuthPapType(self):
+        self.isPap = 1
+
     def setSerialNo(self, serialNo):
         self.serialNo = serialNo
         pass
@@ -282,6 +285,11 @@ class Portal_Attr(Structure):
 
         digest = binascii.a2b_hex(digest)
         return digest
+
+    def genPapPassAttr(self, password):
+        self.attrType = ATTR_PASSWORD
+        self.attrLen = 2 + len(password)
+        self.attrData = password
 
     def genChapPassAttr(self, chapId, password, challenge):
         self.attrType = ATTR_CHAP_PASSWORD

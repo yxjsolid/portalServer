@@ -110,7 +110,7 @@ def doAuth(userIp, userName, password):
     global receiver
     client = portalClient(userIpStr, acip, portalPort, Portal_sharedSecret, receiver)
     receiver.addClient(client)
-    ret = client.run(userIpStr, userName, password)
+    ret = client.run(userIpStr, userName, password, 1)
 
 
 
@@ -168,7 +168,7 @@ class index():
         print "web.data()", web.data()
 
         #return self.render.radius(myRadiusConfig())
-        return self.render.radius(web.ctx.fullpath, None, None)
+        return self.render.radius(web.ctx.fullpath, None, None, None)
 
     def POST(self):
         print "post"
@@ -194,7 +194,7 @@ class index():
 
         #return self.render.radius(myRadiusConfig())
         userIp = userIp.encode("utf8")
-        return self.render.radius(web.ctx.fullpath, ret, userIp)
+        return self.render.radius(web.ctx.fullpath, ret, userIp, userName)
 
 if __name__ == "__main__":
     urls = (

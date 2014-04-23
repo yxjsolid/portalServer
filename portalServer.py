@@ -96,17 +96,23 @@ class portalClient():
             print '\x0D'
 
 
-    def run(self, userIpStr, usrName, password):
+    def run(self, userIpStr, usrName, password, isPap):
         self.usrName = usrName
         self.password = password
         self.userIp = socket.ntohl(struct.unpack("I",socket.inet_aton(userIpStr))[0])
 
-        ret = self.doAuth()
+        if isPap:
+            ret = self.doPapAuth()
+        else:
+            ret = self.doChapAuth()
 
         if ret is STAT_AUTH_TIMEOUT or ret is STAT_CHALLENGE_TIMEOUT:
             self.sendTimeout()
 
+        print "ret",ret
+
         if ret is STAT_SUCCESS:
+            print "send success"
             self.sendSuccess()
 
         return ret
@@ -121,7 +127,16 @@ class portalClient():
         ackFrame = self.waitAckPkt(ACK_LOGOUT, TIMEOUT_AUTH)
         pass
 
-    def doAuth(self):
+    def doPapAuth(self):
+
+        print "############ doPapAuth ############"
+        ret = self.doPapAuthReq()
+        print "doPapAuth done,ret=", ret
+
+        return ret
+        pass
+
+    def doChapAuth(self):
 
         print "\n\n"
         print "############ doAuthReq doChallenge ############"
@@ -139,9 +154,9 @@ class portalClient():
 
 
         print "\n\n"
-        print "############ doAuthReq ############"
-        ret = self.doAuthReq()
-        print "doAuthReq done"
+        print "############ doChapAuth ############"
+        ret = self.doChapAuthReq()
+        print "doChapAuthReq done, ret = ",ret
 
         if ret is not STAT_SUCCESS:
             pass
@@ -230,12 +245,54 @@ class portalClient():
             print "auth Ack validate failed"
             return STAT_FAILED
 
-        if ackFrame.getErrorCode() == CODE_SUCCESS:
+        errCode = ackFrame.getErrorCode()
+
+        if errCode == CODE_CONNECTED:
+            print "client alreay authed"
+            return STAT_SUCCESS
+
+        if errCode == CODE_SUCCESS:
             return STAT_SUCCESS
         else:
             return STAT_FAILED
 
-    def doAuthReq(self):
+    def doPapAuthReq(self):
+        reqId = self.reqId
+        usrName = self.usrName
+        usrPass = self.password
+
+        nameAttr = Portal_Attr()
+        nameAttr.genUserNameAttr(usrName)
+
+        papPassAttr = Portal_Attr()
+        papPassAttr.genPapPassAttr(usrPass)
+
+        reqFrame = Portal_Frame(portalProtocol.REQ_AUTH)
+        reqFrame.setUserIp(self.userIp)
+        reqFrame.setSerialNo(self.genSerialNo())
+        reqFrame.setAuthPapType()
+        reqFrame.setReqID(reqId)
+        reqFrame.appendAttr(nameAttr)
+        reqFrame.appendAttr(papPassAttr)
+
+        print "send auth req, self.userIp = %x"%self.userIp
+
+        reqFrame.genAuthenticator(None, self.sharedSecret)
+
+        self.doSendReq(reqFrame)
+        ackFrame = self.waitAckPkt(ACK_AUTH, TIMEOUT_AUTH)
+        # if newFrame is not None:
+        #     # newFrame.dumpAll()
+        #     # print "getAuthenticator:", [buffer(newFrame.getAuthenticator())[:]]
+
+
+        ret = self.parseAuthAck(reqFrame, ackFrame)
+
+        print "doPapAuthReq ret = ", ret
+        return ret
+
+
+    def doChapAuthReq(self):
         reqId = self.reqId
         usrName = self.usrName
         usrPass = self.password
