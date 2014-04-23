@@ -1,365 +1,403 @@
-#encoding: utf-8
-from ctypes import *
-import random
-import hashlib
-import binascii
+import sys
 import socket
+import binascii
+import os
+from time import sleep
+import select
+import portalFrame
+from portalFrame import *
+import struct
+import threading
+testUser = "xyang"
+testPass = "password"
 
-# typedef struct PortalFrame
-# {
-# uint8 ver;
-# uint8 type;
-# uint8 chap;
-# uint8 rsvd;
-# uint16 serialNo;
-# uint16 reqID;
-# uint32 userIp;
-# uint16 userPort;
-# uint8 errcode;
-# uint8 attrNum;
-# uint8 authenticator[16];
-# uint8 attr[0]
-# }PortalFrame;
-REQ_CHALLENGE = 0x01
-ACK_CHALLENGE = 0x02
-REQ_AUTH = 0x03
-ACK_AUTH = 0x04
-REQ_LOGOUT = 0x05
-ACK_LOGOUT = 0x06
-AFF_ACK_AUTH = 0x07
-NTF_LOGOUT = 0x08
-REQ_INFO = 0x09
-ACK_INFO = 0x0a
+#testUser = "a"
+#testPass = "a"
+Portal_sharedSecret = "shared"
 
-CODE_SUCCESS = 0
-CODE_REJECT = 1
-CODE_CONNECTED = 2
-CODE_NEED_RETRY = 3
-CODE_FAILED = 4
+TIMEOUT_CHALLENGE = 5
+TIMEOUT_AUTH = 5
+
+STAT_FAILED = 0
+STAT_SUCCESS = 1
+STAT_AUTH_DONE = 2
+STAT_CHALLENGE_TIMEOUT = 3
+STAT_AUTH_TIMEOUT = 4
 
 
-class Portal_Frame(BigEndianStructure):
-#class Portal_Frame(Structure):
-    _fields_ = [("ver",         c_ubyte),
-                ("type",        c_ubyte),
-                ("isPap",        c_ubyte),
-                ("rsvd",        c_ubyte),
-                ("serialNo",    c_ushort),
-                ("reqID",       c_ushort),
-                ("userIp",      c_uint),
-                ("userPort",    c_ushort),
-                ("errcode",     c_ubyte),
-                ("attrNum",     c_ubyte),
-                ("authenticator", c_ubyte * 16)]
 
+class portalClient():
 
-    _dictReqID_ ={}
+    _dictSerialNo_ = {}
 
-    def __init__(self, type=REQ_CHALLENGE):
-        Structure.__init__(self)
-        #print "sizeof(Portal_Frame)", sizeof(Portal_Frame)
+    def __init__(self,userIpStr, serverIp, port, secret, receiver):
+        self.server = (serverIp, int(port))
+        self.userIp = socket.ntohl(struct.unpack("I", socket.inet_aton(userIpStr))[0])
+        self.threadEvent = threading.Event()
 
-        self.ver = 2
-        self.type = type
+        self.receiver = receiver
+        self.sharedSecret = secret
+        self.usrName = None
+        self.password = None
+        self.reqId = 0
+        self.challenge = None
+        self.serialNo = None
 
-        self.attrList = []
-        #self.genSerialNo()
+    def waitAckPkt(self, pktType, timeout):
+        self.waitPktType = pktType
+        self.newFrame = None
+        self.threadEvent.clear()
+        self.threadEvent.wait(timeout)
 
-        #print self.reqID
-
-        return
-
-    def testFame(self):
-        self.ver = 1
-        print [buffer(self)[:]]
-        self.testSetAuthenticator()
-        print [buffer(self)[:]]
-
-    def getFrameData(self):
-
-        #socket.htonl()
-        #socket.htons()
-        data = buffer(self)[:]
-        for attr in self.attrList:
-            data += attr.getData()
-
-        return data
-
-    def receiveSome(self, bytes):
-        if len(bytes) < sizeof(self):
-            raise IndexError
-
-        memmove(addressof(self), bytes, sizeof(self))
-        attrBytes = bytes[sizeof(self):]
-        self.parseAttr(attrBytes)
-
-    def parseAttr(self, attrBytes):
-        attList = []
-
-        while len(attrBytes) > 0:
-            attr = Portal_Attr()
-            attr.receiveSome(attrBytes)
-            # attr.dumpAll()
-
-            #dataTotalLen -= attr.getAttrLen()
-            attrBytes = attrBytes[attr.getAttrLen():]
-            attList.append(attr)
-
-
-        if len(attList) != self.attrNum:
-            raise IndexError
-
-        self.attrList = attList
-
-        pass
-
-
-    def testSetAuthenticator(self):
-        bytesa = "abce"
-        print sizeof(self.authenticator)
-        memset(addressof(self.authenticator), 0, 16)
-        fit = min(len(bytesa), sizeof(self.authenticator))
-        memmove(addressof(self.authenticator), bytesa, fit)
-
-    def dumpAll(self):
-        for elem in self._fields_:
-            elemName = elem[0]
-            elemObj = getattr(self, elemName)
-            dumpFormat = "%-10s:0x%x"
-
-            if isinstance(getattr(self, elem[0]), Array):
-                arrayDump = "0x"
-                for byte in elemObj[:]:
-                    arrayDump += "%02x" % byte
-                print "%-10s:" % elemName, arrayDump
-            else:
-                print dumpFormat %(elemName, elemObj)
-
-
-    def dumpAttr(self):
-
-        pass
-
-    def isAuthenticatorMatch(self, auth1, auth2):
-        # print "auth1:", [buffer(auth1)[:]]
-        # print "auth2:", [buffer(auth2)[:]]
-
-
-        if buffer(auth1)[:] == buffer(auth2)[:]:
-            # print "Match"
-            return True
+        if self.newFrame != None:
+            #print "got new frame"
+            pass
         else:
-            # print "mismatch"
-            return False
+            #print "timeout"
+            pass
+        return self.newFrame
 
 
-    def validateAuthenticator(self, authIn, secret):
-        authIdSave = self.getAuthenticator()
-        self.genAuthenticator(authIn, secret)
-
-        if self.isAuthenticatorMatch(authIdSave, self.getAuthenticator()):
-            return True
+    def clientWakeup(self, frame):
+        if frame.type == self.waitPktType:
+            self.threadEvent.set()
+            self.newFrame = frame
         else:
-            return False
-
-    def resetAuthenticator(self):
-        memset(addressof(self.authenticator), 0, sizeof(self.authenticator))
-
-    def getAuthenticator(self):
-        out = (c_ubyte * 16)()
-        memmove(out, self.authenticator, 16)
-        return out
-
-    def genAuthenticator(self, authIn, secret):
-        self.resetAuthenticator()
-        if authIn is not None:
-            memmove(addressof(self.authenticator), authIn, sizeof(self.authenticator))
-
-        frameData = self.getFrameData()
-
-        m = hashlib.md5()
-        m.update(frameData)
-        m.update(secret)
-        digest = m.digest()
-
-        #print "digets1",  m.hexdigest()
-        memmove(addressof(self.authenticator), digest, sizeof(self.authenticator))
-
-
-
-
-    def getErrorCode(self):
-        return self.errcode
-
-    def getReqID(self):
-        return self.reqID
+            print "client recetive pkt type ", frame.type
 
     def getSerialNo(self):
         return self.serialNo
 
-    def genReqId(self):
+
+    def debugGenSerialNo(self):
+        self.serialNo = 0x1
+        return 1
+
+    def genSerialNo(self):
         while True:
-            reqID = random.randint(1, 0xffff)
-            if str(reqID) in self.__class__._dictReqID_:
+            serialNo = random.randint(1, 0xffff)
+            if str(serialNo) in self.__class__._dictSerialNo_:
                 print "hasKey"
             else:
-                self.__class__._dictReqID_[str(reqID)] = 1
-                self.setReqID(reqID)
-                break
+                self.__class__._dictSerialNo_[str(serialNo)] = 1
+                self.serialNo = serialNo
+                return serialNo
         pass
 
-    def setUserIp(self, userIp):
-        self.userIp = userIp
+    def doSendReq(self, frame):
 
-    def setAuthPapType(self):
-        self.isPap = 1
+        self.udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            # print "send data:", frame.getFrameData()
+            self.udpSocket.sendto(frame.getFrameData(), self.server)
+        except KeyboardInterrupt:
+            ##os.system('cls')
+            print sys.exc_info()
+            print '\x0D'
 
-    def setSerialNo(self, serialNo):
-        self.serialNo = serialNo
+
+    def run(self, userIpStr, usrName, password, isPap):
+        self.usrName = usrName
+        self.password = password
+        self.userIp = socket.ntohl(struct.unpack("I",socket.inet_aton(userIpStr))[0])
+
+        if isPap:
+            ret = self.doPapAuth()
+        else:
+            ret = self.doChapAuth()
+
+        if ret is STAT_AUTH_TIMEOUT or ret is STAT_CHALLENGE_TIMEOUT:
+            self.sendTimeout()
+
+        print "ret",ret
+
+        if ret is STAT_SUCCESS:
+            print "send success"
+            self.sendSuccess()
+
+        return ret
+
+    def doLogout(self):
+
+        reqFrame = Portal_Frame(portalFrame.REQ_LOGOUT)
+        reqFrame.setUserIp(self.userIp)
+        reqFrame.setSerialNo(self.genSerialNo())
+        reqFrame.genAuthenticator(None, self.sharedSecret)
+        self.doSendReq(reqFrame)
+        ackFrame = self.waitAckPkt(ACK_LOGOUT, TIMEOUT_AUTH)
         pass
 
-    def setReqID(self, reqId):
-        self.reqID = reqId
+    def doPapAuth(self):
 
-    def setErrorCode(self, code):
-        self.errcode = code
+        print "############ doPapAuth ############"
+        ret = self.doPapAuthReq()
+        print "doPapAuth done,ret=", ret
 
-    def appendAttr(self, attr):
-        self.attrNum += 1
-        self.attrList.append(attr)
-
-    def getAttr(self, attType):
-        for attr in self.attrList:
-            if attr.isType(attType):
-                return attr
-
-        return None
-
-    def genChallengeAck(self):
-        attr = Portal_Attr()
-        challenge = attr.genChallengeAttr()
-        self.appendAttr(attr)
-        return challenge
-
-
-
-
-ATTR_USERNAME = 0x1
-ATTR_PASSWORD = 0x2
-ATTR_CHALLENGE = 0x3
-ATTR_CHAP_PASSWORD = 0x4
-
-class Portal_Attr(Structure):
-    _fields_ = [("attrType",    c_ubyte),
-                ("attrLen",     c_ubyte)]
-
-    def __init__(self):
-        Structure.__init__(self)
-        self.attrData = None
-        return
-
-    def isType(self, type):
-        return self.attrType == type
-
-    def getAttrLen(self):
-        return self.attrLen
-
-    def genUserNameAttr(self, usrName):
-        self.attrType = ATTR_USERNAME
-        self.attrLen = len(usrName) + 2
-        self.attrData = usrName
-        # print "self.attrData %r"%self.attrData, self.attrData
-        # print "####### name = %r"%usrName, usrName, type(usrName)
-
-    def genChapPassMD5(self, chapId, password, challenge):
-        data1 = buffer(challenge)[:]
-        
-        m = hashlib.md5()
-        m.update(chr(chapId))
-        m.update(password)
-        m.update(data1)
-        digest = m.hexdigest()
-        # print "chapId:%x" % chapId
-        # print "chapPassword:", digest
-        # print "chall:", binascii.b2a_hex(buffer(challenge)[:])
-
-        digest = binascii.a2b_hex(digest)
-        return digest
-
-    def genPapPassAttr(self, password):
-        self.attrType = ATTR_PASSWORD
-        self.attrLen = 2 + len(password)
-        self.attrData = password
-
-    def genChapPassAttr(self, chapId, password, challenge):
-        self.attrType = ATTR_CHAP_PASSWORD
-        self.attrLen = 16 + 2
-        self.attrData = self.genChapPassMD5(chapId, password, challenge)
-
-    def genRandomBytes(self, size):
-        output = (c_ubyte * size)()
-        for i in range(size):
-            rByte = random.randint(0, 0xff)
-            output[i] = c_ubyte(rByte)
-
-        return output
-
-    def genChallengeAttr(self):
-        self.attrType = ATTR_CHALLENGE
-        self.attrLen = 16 + 2
-        self.attrData = self.genRandomBytes(16)
-        return self.attrData
-
-    def getData(self):
-        data = buffer(self)[:] + buffer(self.attrData)[:]
-        return data
-
-    def getAttrData(self):
-        return self.attrData
-
-    def receiveSome(self, bytes):
-        if len(bytes) < sizeof(self):
-            raise IndexError
-
-        memmove(addressof(self), bytes, sizeof(self))
-
-        if len(bytes) < self.attrLen:
-            raise IndexError
-        dataBytes = bytes[sizeof(self): self.attrLen]
-        self.parseAttrData(dataBytes)
-
-    def parseAttrData(self, dataBytes):
-        self.attrData = (c_ubyte * (self.attrLen - 2))()
-        memmove(addressof(self.attrData), dataBytes, self.attrLen - 2)
-
-
-    def genAttr(self, type):
-
+        return ret
         pass
 
-    def dumpAll(self):
-        for elem in self._fields_:
-            elemName = elem[0]
-            elemObj = getattr(self, elemName)
-            dumpFormat = "%-10s:0x%x"
+    def doChapAuth(self):
 
-            if isinstance(getattr(self, elem[0]), Array):
-                arrayDump = "0x"
-                for byte in elemObj[:]:
-                    arrayDump += "%02x" % byte
-                print "%-10s:" % elemName, arrayDump
-            else:
-                print dumpFormat %(elemName, elemObj)
+        print "\n\n"
+        print "############ doAuthReq doChallenge ############"
+        ret = self.doChallengeReq()
 
 
-        print "data: %r " % buffer(self.attrData)[:]
+        if ret is STAT_AUTH_DONE:
+            return STAT_SUCCESS
 
+        if ret is not STAT_SUCCESS:
+            print "doChallenge failed "
+            return ret
+        else:
+            print "doChallenge done "
+
+
+        print "\n\n"
+        print "############ doChapAuth ############"
+        ret = self.doChapAuthReq()
+        print "doChapAuthReq done, ret = ",ret
+
+        if ret is not STAT_SUCCESS:
+            pass
+
+        return ret
+
+    def sendSuccess(self):
+        f = Portal_Frame(portalFrame.AFF_ACK_AUTH)
+        f.setReqID(self.reqId)
+        f.setSerialNo(self.getSerialNo())
+        f.setUserIp(self.userIp)
+        f.genAuthenticator(None, self.sharedSecret)
+        self.doSendReq(f)
+
+    def sendTimeout(self):
+        f = Portal_Frame(portalFrame.REQ_LOGOUT)
+        f.setReqID(self.reqId)
+        f.setSerialNo(self.getSerialNo())
+        f.setErrorCode(1)
+        f.setUserIp(self.userIp)
+        f.genAuthenticator(None, self.sharedSecret)
+        self.doSendReq(f)
+
+    def parseChallengeAck(self, reqFrame, ackFrame):
+        # print "serino", frame.getSerialNo()
+        # print "reqID %x " % frame.getReqID()
+        # if ackData is None:
+        #     print "challenge Ack not received"
+        #     return STAT_CHALLENGE_TIMEOUT
+        #
+        #
+        #
+        # ackFrame = Portal_Frame()
+        # ackFrame.receiveSome(ackData)
+
+        if ackFrame is None:
+            print "challenge Ack not received"
+            return STAT_CHALLENGE_TIMEOUT
+
+        ret = ackFrame.validateAuthenticator(reqFrame.getAuthenticator(), self.sharedSecret)
+        if ret is False:
+            print "challenge Ack validate failed"
+            return STAT_FAILED
+
+        errCode = ackFrame.getErrorCode()
+
+        if errCode == CODE_CONNECTED:
+            print "client alreay authed"
+            return STAT_AUTH_DONE
+
+        if errCode != CODE_SUCCESS:
+            print "challenge request failed, error= ", ackFrame.getErrorCode()
+            return STAT_FAILED
+
+        self.reqId = ackFrame.getReqID()
+        attr = ackFrame.getAttr(ATTR_CHALLENGE)
+        if attr:
+            self.challenge = attr.getAttrData()
+            # print "receiveChallengeAck", self.challenge
+        else:
+            raise ValueError
+
+        return STAT_SUCCESS
+
+    def doChallengeReq(self):
+        reqFrame = Portal_Frame(portalFrame.REQ_CHALLENGE)
+        reqFrame.setSerialNo(self.genSerialNo())
+        #reqFrame.setSerialNo(self.debugGenSerialNo())
+
+        reqFrame.setUserIp(self.userIp)
+        reqFrame.genAuthenticator(None, self.sharedSecret)
+
+        self.doSendReq(reqFrame)
+        ackFrame = self.waitAckPkt(ACK_CHALLENGE, TIMEOUT_CHALLENGE)
+        ret = self.parseChallengeAck(reqFrame, ackFrame)
+        return ret
+
+    def parseAuthAck(self, reqFrame, ackFrame):
+
+        if ackFrame is None:
+            print "auth ack not received"
+            return STAT_AUTH_TIMEOUT
+
+        ret = ackFrame.validateAuthenticator(reqFrame.getAuthenticator(), self.sharedSecret)
+        if ret is False:
+            print "auth Ack validate failed"
+            return STAT_FAILED
+
+        errCode = ackFrame.getErrorCode()
+
+        if errCode == CODE_CONNECTED:
+            print "client alreay authed"
+            return STAT_SUCCESS
+
+        if errCode == CODE_SUCCESS:
+            return STAT_SUCCESS
+        else:
+            return STAT_FAILED
+
+    def doPapAuthReq(self):
+        reqId = self.reqId
+        usrName = self.usrName
+        usrPass = self.password
+
+        nameAttr = Portal_Attr()
+        nameAttr.genUserNameAttr(usrName)
+
+        papPassAttr = Portal_Attr()
+        papPassAttr.genPapPassAttr(usrPass)
+
+        reqFrame = Portal_Frame(portalFrame.REQ_AUTH)
+        reqFrame.setUserIp(self.userIp)
+        reqFrame.setSerialNo(self.genSerialNo())
+        reqFrame.setAuthPapType()
+        reqFrame.setReqID(reqId)
+        reqFrame.appendAttr(nameAttr)
+        reqFrame.appendAttr(papPassAttr)
+
+        print "send auth req, self.userIp = %x"%self.userIp
+
+        reqFrame.genAuthenticator(None, self.sharedSecret)
+
+        self.doSendReq(reqFrame)
+        ackFrame = self.waitAckPkt(ACK_AUTH, TIMEOUT_AUTH)
+        # if newFrame is not None:
+        #     # newFrame.dumpAll()
+        #     # print "getAuthenticator:", [buffer(newFrame.getAuthenticator())[:]]
+
+
+        ret = self.parseAuthAck(reqFrame, ackFrame)
+
+        print "doPapAuthReq ret = ", ret
+        return ret
+
+
+    def doChapAuthReq(self):
+        reqId = self.reqId
+        usrName = self.usrName
+        usrPass = self.password
+        challenge = self.challenge
+
+        nameAttr = Portal_Attr()
+        nameAttr.genUserNameAttr(usrName)
+
+        reqtmp = c_ushort(reqId)
+        reqIdBuff = (c_ubyte * 2)()
+        memmove(addressof(reqIdBuff), addressof(reqtmp), 2)
+
+        # print "reqtmp" ,reqtmp
+        # print "reqIdBuff", reqIdBuff[0]
+        # print "reqIdBuff", reqIdBuff[1]
+
+        chapPassAttr = Portal_Attr()
+        chapPassAttr.genChapPassAttr(reqIdBuff[0], usrPass, challenge)
+
+        reqFrame = Portal_Frame(portalFrame.REQ_AUTH)
+        reqFrame.setUserIp(self.userIp)
+        reqFrame.setSerialNo(self.genSerialNo())
+        reqFrame.setReqID(reqId)
+        reqFrame.appendAttr(nameAttr)
+        reqFrame.appendAttr(chapPassAttr)
+
+        print "send auth req, self.userIp = %x"%self.userIp
+
+        reqFrame.genAuthenticator(None, self.sharedSecret)
+
+        self.doSendReq(reqFrame)
+        ackFrame = self.waitAckPkt(ACK_AUTH, TIMEOUT_AUTH)
+        # if newFrame is not None:
+        #     # newFrame.dumpAll()
+        #     # print "getAuthenticator:", [buffer(newFrame.getAuthenticator())[:]]
+
+        ret = self.parseAuthAck(reqFrame, ackFrame)
+        return ret
+
+
+class PortalPacketReceiver (threading.Thread):
+    def __init__(self, port):
+        threading.Thread.__init__(self)
+
+        self.address = ('0.0.0.0', int(port))
+        self.udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.udpSocket.bind(self.address)
+        self.clients = {}
+
+    def run(self):
+        #print "Starting " + "PortalPacketReceiver \n"
+        #threadLock.acquire()
+        #threadLock.release()class myThread (threading.Thread):
+        self.doReceive()
+
+    def handleData(self, pktData):
+        #print "pktData:", [pktData]
+        pkt = Portal_Frame()
+        pkt.receiveSome(pktData)
+        client = self.getClient(pkt.userIp)
+        if client:
+            client.clientWakeup(pkt)
+
+    def getClient(self, userIp):
+        if self.clients.has_key(userIp):
+            client = self.clients[userIp]
+            return client
+        else:
+            print "not found client ip :", userIp
+
+    def doReceive(self):
+        ready = select.select([self.udpSocket], [], [], None)
+        packetCnt = 0
+        #if ready[0]:
+        while True:
+            try:
+                data = self.udpSocket.recv(4096)
+                packetCnt += 1
+                print "total packets= ", packetCnt
+                self.handleData(data)
+            except:
+                print sys.exc_info()
+                print "\n\n\n xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                return None
+            # else:
+            #     print "\n######### receive timeout #######\n"
+            #     return None
+
+
+    def addClient(self, client):
+        self.clients[client.userIp] = client
+
+        print "reciever : all client:", self.clients
 
 if __name__ == '__main__':
+    port = "50100"
+    serverIp = "10.103.12.154"
+    myIp = '10.103.12.152'
+    userip = "3.3.3.4"
 
-    # frame = Portal_Frame()
-    # frame.dump()
-    # frame.genSerialNo()
+    client = portalClient(myIp, serverIp, port, Portal_sharedSecret)
+    ret = client.run(userip, testUser, testPass)
 
-    attr = Portal_Attr()
-    attr.genChallengeAttr()
+
+    if ret is STAT_SUCCESS:
+        print "login success"
+    else:
+        print "login failed"

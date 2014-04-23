@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import web
 from web import form
-from portalServer import *
+from portalProtocol import *
 
 
 
