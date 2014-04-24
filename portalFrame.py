@@ -37,6 +37,9 @@ CODE_CONNECTED = 2
 CODE_NEED_RETRY = 3
 CODE_FAILED = 4
 
+PORTAL_VERSION_1 = 1
+PORTAL_VERSION_2 = 2
+
 
 class Portal_Frame(BigEndianStructure):
 #class Portal_Frame(Structure):
@@ -49,8 +52,8 @@ class Portal_Frame(BigEndianStructure):
                 ("userIp",      c_uint),
                 ("userPort",    c_ushort),
                 ("errcode",     c_ubyte),
-                ("attrNum",     c_ubyte),
-                ("authenticator", c_ubyte * 16)]
+                ("attrNum",     c_ubyte)]
+                #("authenticator", c_ubyte * 16)]
 
 
     _dictReqID_ ={}
@@ -59,10 +62,11 @@ class Portal_Frame(BigEndianStructure):
         Structure.__init__(self)
         #print "sizeof(Portal_Frame)", sizeof(Portal_Frame)
 
-        self.ver = 2
+        self.ver = 1
         self.type = type
 
         self.attrList = []
+        self.authenticator = (c_ubyte * 16)()
         #self.genSerialNo()
 
         #print self.reqID
@@ -80,6 +84,10 @@ class Portal_Frame(BigEndianStructure):
         #socket.htonl()
         #socket.htons()
         data = buffer(self)[:]
+
+        if self.getVersion() == PORTAL_VERSION_2:
+            data += buffer(self.getAuthenticator())[:]
+
         for attr in self.attrList:
             data += attr.getData()
 
@@ -90,7 +98,16 @@ class Portal_Frame(BigEndianStructure):
             raise IndexError
 
         memmove(addressof(self), bytes, sizeof(self))
-        attrBytes = bytes[sizeof(self):]
+
+        dataOffset = sizeof(self)
+        if self.ver == PORTAL_VERSION_1:
+            pass
+        elif self.ver == PORTAL_VERSION_2:
+            memmove(addressof(self.authenticator), bytes[dataOffset:], 16)
+            dataOffset += 16
+            pass
+
+        attrBytes = bytes[dataOffset:]
         self.parseAttr(attrBytes)
 
     def parseAttr(self, attrBytes):
@@ -154,6 +171,10 @@ class Portal_Frame(BigEndianStructure):
 
 
     def validateAuthenticator(self, authIn, secret):
+
+        if self.ver == PORTAL_VERSION_1:
+            return True
+
         authIdSave = self.getAuthenticator()
         self.genAuthenticator(authIn, secret)
 
@@ -171,6 +192,10 @@ class Portal_Frame(BigEndianStructure):
         return out
 
     def genAuthenticator(self, authIn, secret):
+
+        if self.getVersion() == PORTAL_VERSION_1:
+            return
+
         self.resetAuthenticator()
         if authIn is not None:
             memmove(addressof(self.authenticator), authIn, sizeof(self.authenticator))
@@ -210,6 +235,12 @@ class Portal_Frame(BigEndianStructure):
 
     def setAuthPapType(self):
         self.isPap = 1
+
+    def setVersion(self, ver):
+        self.ver = ver
+
+    def getVersion(self):
+        return self.ver
 
     def setSerialNo(self, serialNo):
         self.serialNo = serialNo

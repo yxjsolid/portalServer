@@ -8,6 +8,9 @@ from radiusClient import *
 radiusServer = "10.103.12.254"
 shardSecret = "shared"
 
+
+radiusServer = "122.224.140.174"
+shardSecret = "test123"
 #radiusServer = "10.8.35.2"
 #shardSecret = "password"
 
@@ -40,6 +43,7 @@ class portalDaemon():
         ackFrame = Portal_Frame(portalProtocol.ACK_CHALLENGE)
         ackFrame.setSerialNo(reqFrame.serialNo)
         ackFrame.genReqId()
+        ackFrame.setVersion(reqFrame.getVersion())
         challenge = ackFrame.genChallengeAck()
         self.lastChallenge = challenge
 
@@ -113,7 +117,8 @@ class portalDaemon():
 
     def doSend(self, frame):
         try:
-            self.udpSocket.sendto(frame.getFrameData(), self.server)			##Send packets
+            #self.udpSocket.sendto(frame.getFrameData(), self.server)			##Send packets
+            self.udpSocket.sendto(frame.getFrameData(), self.fromAddr)			##Send packets
         except KeyboardInterrupt:									##On Ctrl+C, print new line and break
         ##os.system('cls')
             print '\x0D'
@@ -122,9 +127,11 @@ class portalDaemon():
         print "notImplement"
         raise TypeError
 
-    def parseData(self, data):
+    def parseData(self, data, fromAddr):
         frame = Portal_Frame()
         frame.receiveSome(data)
+        self.fromAddr = fromAddr
+
 
         func = {
             REQ_CHALLENGE: self.handleChallengeAck,
@@ -148,16 +155,18 @@ class portalDaemon():
                 print "client has exist"
                 break
 
-            self.parseData(data)
+            self.parseData(data, addr)
 
 
 
 
 
 if __name__ == '__main__':
-    port = 50100
+    port = 2000
+
     serverIp = "10.103.12.152"
-    myIp = '10.103.12.154'
+    serverIp = "60.12.241.157"
+    myIp = '0.0.0.0'
 
 
     daemon = portalDaemon(myIp, serverIp, port, Portal_sharedSecret)

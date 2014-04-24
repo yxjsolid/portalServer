@@ -95,22 +95,22 @@ class formtest:
             # extracting the validated arguments from the form.
             return "Grrreat success! boe: %s, bax: %s" % (f.d.boe, f['bax'].value)
 
-def doAuth(userIp, userName, password):
+def doAuth(acIp, userIp, userName, password):
 
     userName = userName.encode("utf8")
     password = password.encode("utf8")
     userIpStr = userIp.encode("utf8")
+    wlanacname = acIp.encode("utf8")
     print "userName = %r password = %r" % (userName, password)
 
     myCfg = myRadiusConfig()
-    acip = myCfg.ACIP
     portalPort = myCfg.portalPort
 
     global udpSocket
     global receiver
-    client = portalClient(userIpStr, acip, portalPort, Portal_sharedSecret, receiver)
+    client = portalClient(userIpStr, wlanacname, portalPort, Portal_sharedSecret, receiver)
     receiver.addClient(client)
-    ret = client.run(userIpStr, userName, password, 1)
+    ret = client.run(userIpStr, userName, password, 0)
 
 
 
@@ -167,6 +167,8 @@ class index():
         # print "web.input()", web.input()
         print "web.data()", web.data()
 
+
+
         #return self.render.radius(myRadiusConfig())
         return self.render.radius(web.ctx.fullpath, None, None, None)
 
@@ -188,9 +190,30 @@ class index():
         password = f.d.txtPassword
         userIp = web.input().wlanuserip
 
+        wlanacname = web.input().wlanacname
+
+
+        wlanacname = "".join(wlanacname.split('.'))
+
+
+
+        print "wlanacname:", wlanacname
+
+        wlanacname = [ wlanacname[x*3:x*3+3] for x in range(4)]
+        print "wlanacname 111", wlanacname
+
+        wlanacname = map(lambda x:str(int(x)), wlanacname)
+        #wlanacname = map(lambda x:str(222), wlanacname[:])
+
+        wlanacname = ".".join(wlanacname)
+
+        print "wlanacname 222 %r"% wlanacname
+
+        #print "aaaa:", wlanacname[0:3]
+        #print "aaaa:", wlanacname[3:6]
         print "usr:%r  pass:%r " %(userName, password)
 
-        ret = doAuth(userIp, userName, password)
+        ret = doAuth(wlanacname, userIp, userName, password)
 
         #return self.render.radius(myRadiusConfig())
         userIp = userIp.encode("utf8")

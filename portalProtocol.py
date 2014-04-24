@@ -16,7 +16,7 @@ testPass = "password"
 Portal_sharedSecret = "shared"
 
 TIMEOUT_CHALLENGE = 5
-TIMEOUT_AUTH = 5
+TIMEOUT_AUTH = 15
 
 STAT_FAILED = 0
 STAT_SUCCESS = 1
@@ -83,6 +83,29 @@ class portalClient():
                 self.serialNo = serialNo
                 return serialNo
         pass
+
+
+    def doReceiveAck(self, timeout):
+        ready = select.select([self.udpSocket], [], [], timeout)
+        packetCnt = 0
+        if ready[0]:
+            try:
+                data = self.udpSocket.recv(4096)
+                packetCnt += 1
+
+                pkt = Portal_Frame()
+                pkt.receiveSome(data)
+                self.udpSocket.close()
+                return pkt
+            except:
+                print sys.exc_info()
+                print "\n\n\n xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                return None
+                # else:
+                #     print "\n######### receive timeout #######\n"
+                #     return None
+
+
 
     def doSendReq(self, frame):
 
@@ -230,7 +253,8 @@ class portalClient():
         reqFrame.genAuthenticator(None, self.sharedSecret)
 
         self.doSendReq(reqFrame)
-        ackFrame = self.waitAckPkt(ACK_CHALLENGE, TIMEOUT_CHALLENGE)
+        #ackFrame = self.waitAckPkt(ACK_CHALLENGE, TIMEOUT_CHALLENGE)
+        ackFrame = self.doReceiveAck(TIMEOUT_CHALLENGE)
         ret = self.parseChallengeAck(reqFrame, ackFrame)
         return ret
 
@@ -254,6 +278,7 @@ class portalClient():
         if errCode == CODE_SUCCESS:
             return STAT_SUCCESS
         else:
+            print "failed errcode = ", errCode
             return STAT_FAILED
 
     def doPapAuthReq(self):
@@ -280,12 +305,11 @@ class portalClient():
         reqFrame.genAuthenticator(None, self.sharedSecret)
 
         self.doSendReq(reqFrame)
-        ackFrame = self.waitAckPkt(ACK_AUTH, TIMEOUT_AUTH)
+        ackFrame = self.doReceiveAck(TIMEOUT_AUTH)
+       #ackFrame = self.waitAckPkt(ACK_AUTH, TIMEOUT_AUTH)
         # if newFrame is not None:
         #     # newFrame.dumpAll()
         #     # print "getAuthenticator:", [buffer(newFrame.getAuthenticator())[:]]
-
-
         ret = self.parseAuthAck(reqFrame, ackFrame)
 
         print "doPapAuthReq ret = ", ret
@@ -324,7 +348,8 @@ class portalClient():
         reqFrame.genAuthenticator(None, self.sharedSecret)
 
         self.doSendReq(reqFrame)
-        ackFrame = self.waitAckPkt(ACK_AUTH, TIMEOUT_AUTH)
+        #ackFrame = self.waitAckPkt(ACK_AUTH, TIMEOUT_AUTH)
+        ackFrame = self.doReceiveAck(TIMEOUT_AUTH)
         # if newFrame is not None:
         #     # newFrame.dumpAll()
         #     # print "getAuthenticator:", [buffer(newFrame.getAuthenticator())[:]]
