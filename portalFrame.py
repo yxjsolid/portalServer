@@ -58,11 +58,11 @@ class Portal_Frame(BigEndianStructure):
 
     _dictReqID_ ={}
 
-    def __init__(self, type=REQ_CHALLENGE):
+    def __init__(self, type, version):
         Structure.__init__(self)
         #print "sizeof(Portal_Frame)", sizeof(Portal_Frame)
 
-        self.ver = 1
+        self.ver = version
         self.type = type
 
         self.attrList = []

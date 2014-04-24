@@ -1,17 +1,32 @@
-$def with (fullpath, authResult, userIp, userName)
+$def with (fullpath, authResult, userIp, wlanacname, userName)
 
 $code:
-    logo = radiusCfg.logo
+    logo = portalCfg.logo
+    isPap = portalCfg.isPap
+    ver = portalCfg.portalVersion
+    
+    serverInfo = ""
+    
+    if isPap:
+    	authMethodStr = "Auth method: Pap"
+    else:
+    	authMethodStr = "Auth method: Chap"
+    
+    if ver == 1:
+    	portalVerStr = "Portal Version: 1.0"
+    else:
+    	portalVerStr = "Portal Version: 2.0"
+     
     ip = ""
-    myRadiusServer = radiusCfg.myRadiusServer
+    isPap = portalCfg.isPap
     if authResult is not None:
         if authResult == True:
             #authResultTxt = "success"
             #authResultTxt = "<font color=""green""><b>Credentials Accepted.</b></font><br>Session Lifetime: " & round(sessTimer/60) & " minutes.<br>Idle Timer: " & round(idleTimer/60) & " minutes."
             authResultTxt = '<font color=""green""><b>Credentials Accepted.</b></font><br>Session Lifetime: " 100 " minutes.<br>Idle Timer: " 100 " minutes.'
-            strLogoutPageFormat = "<script language='javascript'>window.open('logout.html?wlanuserip=%s', 'logout', 'toolbar=no, addressbar=no, menubar=no, width=400,height=250');</script>"
+            strLogoutPageFormat = "<script language='javascript'>window.open('logout.html?wlanuserip=%s&wlanacname=%s', 'logout', 'toolbar=no, addressbar=no, menubar=no, width=400,height=250');</script>"
             
-            strLogoutPage =  strLogoutPageFormat % userIp
+            strLogoutPage =  strLogoutPageFormat % (userIp, wlanacname)
             
             #strLogoutPage = "<script language='javascript'></script>"
         else:
@@ -93,7 +108,7 @@ function onSubmit(){
 </table>
 <table width="100%" border="0" cellpadding="2" cellspacing="0">
 	<tr class="heading">
-		<td colspan=3 align="center"><font color="white">For Internal Test</td>
+		<td colspan=3 align="center"><font color="white">For Internal Test &nbsp;&nbsp;&nbsp; $portalVerStr &nbsp;&nbsp;&nbsp;$authMethodStr</td>
 	</tr>
 </table>
 <table width="100%" border="0" cellpadding="2" cellspacing="0">

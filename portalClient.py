@@ -13,10 +13,11 @@ testPass = "password"
 
 #testUser = "a"
 #testPass = "a"
-Portal_sharedSecret = "shared"
+#Portal_sharedSecret = "shared"
 
-TIMEOUT_CHALLENGE = 5
+TIMEOUT_CHALLENGE = 15
 TIMEOUT_AUTH = 15
+TMIEOUT_LOGOUT = 15
 
 STAT_FAILED = 0
 STAT_SUCCESS = 1
@@ -30,13 +31,14 @@ class portalClient():
 
     _dictSerialNo_ = {}
 
-    def __init__(self,userIpStr, serverIp, port, secret, receiver):
+    def __init__(self, userIpStr, serverIp, port, version, isPap, secret):
         self.server = (serverIp, int(port))
         self.userIp = socket.ntohl(struct.unpack("I", socket.inet_aton(userIpStr))[0])
         self.threadEvent = threading.Event()
+        self.isPap = isPap
+        self.version = version
 
-        self.receiver = receiver
-        self.sharedSecret = secret
+        self.sharedSecret = secret.encode("utf8")
         self.usrName = None
         self.password = None
         self.reqId = 0
@@ -93,7 +95,7 @@ class portalClient():
                 data = self.udpSocket.recv(4096)
                 packetCnt += 1
 
-                pkt = Portal_Frame()
+                pkt = Portal_Frame(portalFrame.REQ_CHALLENGE, self.version)
                 pkt.receiveSome(data)
                 self.udpSocket.close()
                 return pkt
@@ -118,13 +120,11 @@ class portalClient():
             print sys.exc_info()
             print '\x0D'
 
+    def doClientAuth(self, usrName, password):
+        self.usrName = usrName.encode("utf8")
+        self.password = password.encode("utf8")
 
-    def run(self, userIpStr, usrName, password, isPap):
-        self.usrName = usrName
-        self.password = password
-        self.userIp = socket.ntohl(struct.unpack("I",socket.inet_aton(userIpStr))[0])
-
-        if isPap:
+        if self.isPap:
             ret = self.doPapAuth()
         else:
             ret = self.doChapAuth()
@@ -142,12 +142,13 @@ class portalClient():
 
     def doLogout(self):
 
-        reqFrame = Portal_Frame(portalFrame.REQ_LOGOUT)
+        reqFrame = Portal_Frame(portalFrame.REQ_LOGOUT, self.version)
         reqFrame.setUserIp(self.userIp)
         reqFrame.setSerialNo(self.genSerialNo())
         reqFrame.genAuthenticator(None, self.sharedSecret)
         self.doSendReq(reqFrame)
-        ackFrame = self.waitAckPkt(ACK_LOGOUT, TIMEOUT_AUTH)
+        #ackFrame = self.waitAckPkt(ACK_LOGOUT, TIMEOUT_AUTH)
+        #ackFrame = self.doReceiveAck(TMIEOUT_LOGOUT)
         pass
 
     def doPapAuth(self):
@@ -187,7 +188,7 @@ class portalClient():
         return ret
 
     def sendSuccess(self):
-        f = Portal_Frame(portalFrame.AFF_ACK_AUTH)
+        f = Portal_Frame(portalFrame.AFF_ACK_AUTH, self.version)
         f.setReqID(self.reqId)
         f.setSerialNo(self.getSerialNo())
         f.setUserIp(self.userIp)
@@ -195,7 +196,7 @@ class portalClient():
         self.doSendReq(f)
 
     def sendTimeout(self):
-        f = Portal_Frame(portalFrame.REQ_LOGOUT)
+        f = Portal_Frame(portalFrame.REQ_LOGOUT, self.version)
         f.setReqID(self.reqId)
         f.setSerialNo(self.getSerialNo())
         f.setErrorCode(1)
@@ -204,17 +205,6 @@ class portalClient():
         self.doSendReq(f)
 
     def parseChallengeAck(self, reqFrame, ackFrame):
-        # print "serino", frame.getSerialNo()
-        # print "reqID %x " % frame.getReqID()
-        # if ackData is None:
-        #     print "challenge Ack not received"
-        #     return STAT_CHALLENGE_TIMEOUT
-        #
-        #
-        #
-        # ackFrame = Portal_Frame()
-        # ackFrame.receiveSome(ackData)
-
         if ackFrame is None:
             print "challenge Ack not received"
             return STAT_CHALLENGE_TIMEOUT
@@ -245,7 +235,7 @@ class portalClient():
         return STAT_SUCCESS
 
     def doChallengeReq(self):
-        reqFrame = Portal_Frame(portalFrame.REQ_CHALLENGE)
+        reqFrame = Portal_Frame(portalFrame.REQ_CHALLENGE, self.version)
         reqFrame.setSerialNo(self.genSerialNo())
         #reqFrame.setSerialNo(self.debugGenSerialNo())
 
@@ -292,7 +282,7 @@ class portalClient():
         papPassAttr = Portal_Attr()
         papPassAttr.genPapPassAttr(usrPass)
 
-        reqFrame = Portal_Frame(portalFrame.REQ_AUTH)
+        reqFrame = Portal_Frame(portalFrame.REQ_AUTH, self.version)
         reqFrame.setUserIp(self.userIp)
         reqFrame.setSerialNo(self.genSerialNo())
         reqFrame.setAuthPapType()
@@ -336,7 +326,7 @@ class portalClient():
         chapPassAttr = Portal_Attr()
         chapPassAttr.genChapPassAttr(reqIdBuff[0], usrPass, challenge)
 
-        reqFrame = Portal_Frame(portalFrame.REQ_AUTH)
+        reqFrame = Portal_Frame(portalFrame.REQ_AUTH, self.version)
         reqFrame.setUserIp(self.userIp)
         reqFrame.setSerialNo(self.genSerialNo())
         reqFrame.setReqID(reqId)
@@ -419,7 +409,7 @@ if __name__ == '__main__':
     userip = "3.3.3.4"
 
     client = portalClient(myIp, serverIp, port, Portal_sharedSecret)
-    ret = client.run(userip, testUser, testPass)
+    ret = client.doAuth(testUser, testPass)
 
 
     if ret is STAT_SUCCESS:
