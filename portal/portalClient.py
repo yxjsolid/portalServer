@@ -1,13 +1,10 @@
 import sys
 import socket
-import binascii
-import os
-from time import sleep
 import select
 import portalFrame
 from portalFrame import *
 import struct
-import threading
+
 testUser = "xyang"
 testPass = "password"
 
@@ -34,7 +31,7 @@ class portalClient():
     def __init__(self, userIpStr, serverIp, port, version, isPap, secret):
         self.server = (serverIp, int(port))
         self.userIp = socket.ntohl(struct.unpack("I", socket.inet_aton(userIpStr))[0])
-        self.threadEvent = threading.Event()
+        #self.threadEvent = threading.Event()
         self.isPap = isPap
         self.version = version
 
@@ -45,19 +42,19 @@ class portalClient():
         self.challenge = None
         self.serialNo = None
 
-    def waitAckPkt(self, pktType, timeout):
-        self.waitPktType = pktType
-        self.newFrame = None
-        self.threadEvent.clear()
-        self.threadEvent.wait(timeout)
-
-        if self.newFrame != None:
-            #print "got new frame"
-            pass
-        else:
-            #print "timeout"
-            pass
-        return self.newFrame
+    # def waitAckPkt(self, pktType, timeout):
+    #     self.waitPktType = pktType
+    #     self.newFrame = None
+    #     self.threadEvent.clear()
+    #     self.threadEvent.wait(timeout)
+    #
+    #     if self.newFrame != None:
+    #         #print "got new frame"
+    #         pass
+    #     else:
+    #         #print "timeout"
+    #         pass
+    #     return self.newFrame
 
 
     def clientWakeup(self, frame):
@@ -348,59 +345,7 @@ class portalClient():
         return ret
 
 
-class PortalPacketReceiver (threading.Thread):
-    def __init__(self, port):
-        threading.Thread.__init__(self)
 
-        self.address = ('0.0.0.0', int(port))
-        self.udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.udpSocket.bind(self.address)
-        self.clients = {}
-
-    def run(self):
-        #print "Starting " + "PortalPacketReceiver \n"
-        #threadLock.acquire()
-        #threadLock.release()class myThread (threading.Thread):
-        self.doReceive()
-
-    def handleData(self, pktData):
-        #print "pktData:", [pktData]
-        pkt = Portal_Frame()
-        pkt.receiveSome(pktData)
-        client = self.getClient(pkt.userIp)
-        if client:
-            client.clientWakeup(pkt)
-
-    def getClient(self, userIp):
-        if self.clients.has_key(userIp):
-            client = self.clients[userIp]
-            return client
-        else:
-            print "not found client ip :", userIp
-
-    def doReceive(self):
-        ready = select.select([self.udpSocket], [], [], None)
-        packetCnt = 0
-        #if ready[0]:
-        while True:
-            try:
-                data = self.udpSocket.recv(4096)
-                packetCnt += 1
-                print "total packets= ", packetCnt
-                self.handleData(data)
-            except:
-                print sys.exc_info()
-                print "\n\n\n xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                return None
-            # else:
-            #     print "\n######### receive timeout #######\n"
-            #     return None
-
-
-    def addClient(self, client):
-        self.clients[client.userIp] = client
-
-        print "reciever : all client:", self.clients
 
 if __name__ == '__main__':
     port = "50100"

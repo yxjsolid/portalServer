@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import web
 from web import form
-from portalClientMgmt import *
+from portal.portalClientMgmt import *
 
 class myPortalCfg():
     logoutPopup = True
@@ -19,7 +19,7 @@ loginForm = form.Form(
 
 class logoutPage():
     def __init__(self):
-        self.render = web.template.render('tmp/', globals={"portalCfg":myPortalCfg()})
+        self.render = web.template.render('templates/', globals={"portalCfg":myPortalCfg()})
 
     def GET(self):
         return self.render.logout(web.ctx.fullpath, 1, 2400)
@@ -38,7 +38,7 @@ class logoutPage():
 
 class defaultPage():
     def __init__(self):
-        self.render = web.template.render('tmp/', globals={"portalCfg":myPortalCfg()})
+        self.render = web.template.render('templates/', globals={"portalCfg":myPortalCfg()})
 
     def GET(self):
         return self.render.portalDefault(web.ctx.fullpath, None, None, None,None)
