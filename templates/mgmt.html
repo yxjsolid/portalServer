@@ -1,0 +1,143 @@
+$def with (clientMgmt)
+
+$code:
+    clients =clientMgmt.testGetAllClients()
+    
+    clientHtmlFormat = '<td class="listLabel" nowrap>%s</td>\
+                    <td class="listLabel" nowrap>%s</td>\
+                    <td class="listLabel" nowrap>%s</td>\
+                    <td class="listLabel" nowrap>log out</td>'
+    
+    clientHtml = "<tr>"
+    for client in clients:
+        clientHtml += clientHtmlFormat%(client.serverIpStr,client.userIpStr,client.usrName)
+    clientHtml += "</tr>"
+
+
+<HTML>
+<HEAD>
+<TITLE>Portal Server Management</TITLE>
+<script type="text/JavaScript" src="static/jquery-2.1.0.min.js"></script>
+<SCRIPT LANGUAGE="Javascript"> 
+
+//'Javascript Seconds Countdown Timer
+
+function clientObj()
+{
+	this.ac = ""
+	this.ip = ""
+	this.user = ""
+}
+
+
+function onLoadFunc()
+{
+		checkData();
+
+}
+
+function putClientList()
+{
+	
+	
+}
+
+function doClientLogout(acip, userip)
+{
+
+	alert("doClientLogout");
+	alert(acip + " " + userip);
+	
+	
+	handleJson ({'data' : 'action=logout;' + 'acIp=' + acip + ';userIp=' + userip,'type' : 'POST'});
+	
+}
+
+
+function ajaxSuccess(jsonData)
+{	
+	var clients = jsonData.allClients;
+	var clientinfo = "";
+	
+	var tbl = document.getElementById("allClients");
+	
+	for(var i=0; i<clients.length; i++)
+	{
+		var client = clients[i];
+		clientinfo  +=  '<td class="listLabel" nowrap>'+ client.acIp+'</td>\n';
+		clientinfo  +=  '<td class="listLabel" nowrap>'+ client.userIp+'</td>\n';
+		clientinfo  +=  '<td class="listLabel" nowrap>'+ client.userName+'</td>\n';
+		var param = "'" + client.acIp + "','" + client.userIp + "'";
+		clientinfo  +=  '<td class="button" nowrap><button type="button" onclick="doClientLogout('+ param +')">logout!</button></td>\n';
+  }
+  tbl.innerHTML = clientinfo;  
+}
+
+function ajaxError(jsonData)
+{
+	alert("ajaxError");	
+}
+
+	var handleJson = function (options) {
+			var options = options || {};
+			var defaults = {
+				type:"GET",
+				url: window.location.href.substring(0, window.location.href.lastIndexOf("/") + 1) +
+					"getJsonData.json",
+				data: 'dataSet=all',
+				success: ajaxSuccess,
+				error: ajaxError
+				
+			};
+			var opt = $$.extend({}, defaults, options);
+			
+			\$.ajax({
+				type: opt.type,
+				url: opt.url,
+				data: opt.data,
+				cache: false,
+				success: opt.success,
+				error: opt.error,
+				dataType: 'json'
+			});
+		}
+
+
+function checkData()
+{
+	handleJson ({'data' : 'dataSet=allClient','type' : 'GET'});
+	setTimeout(checkData, 1000);
+		
+}
+
+
+</SCRIPT> 
+
+</HEAD>
+
+<BODY onload='onLoadFunc()'>
+<span id="loggedIn">
+<form id="frmValidator" name="frmValidator" method="post">
+<table width="100%" border="0" cellpadding="2" cellspacing="0">
+	<tr class="heading">
+		<td colspan=2 align="center">&nbsp</td>
+	</tr>
+	
+	<tr>
+			<td class="listLabel" nowrap>AC</td>
+			<td class="listLabel" nowrap>User Ip</td>
+			<td class="listLabel" nowrap>User Name</td>
+			<td class="listLabel" nowrap>log out</td>
+	</tr>
+	
+	<tr name="allClients" id="allClients">
+
+	</tr>
+
+</table>
+</form>
+</span>
+
+
+</BODY>
+</HTML>

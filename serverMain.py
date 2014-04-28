@@ -33,14 +33,18 @@ class logoutPage():
         userIp = web.input().wlanuserip
         wlanacname = web.input().wlanacname
         print "logout userip = ", userIp
-        clientMgmt.doPortalLogout(wlanacname, userIp)
+        clientMgmt.doPortalLogoutByAcName(wlanacname, userIp)
         return self.render.logout(web.ctx.fullpath, 0, 0)
 
 class defaultPage():
     def __init__(self):
-        self.render = web.template.render('templates/', globals={"portalCfg":myPortalCfg()})
+        global clientMgmt
+        self.render = web.template.render('templates/', globals={"portalCfg":myPortalCfg(), "clientMgmt":clientMgmt})
 
     def GET(self):
+
+        clientMgmt.dumpAllClients()
+
         return self.render.portalDefault(web.ctx.fullpath, None, None, None,None)
 
     def POST(self):
@@ -67,11 +71,62 @@ class defaultPage():
         return self.render.portalDefault(web.ctx.fullpath, ret, userIp, wlanacname, userName)
 
 
-if __name__ == "__main__":
+
+
+def launchPortalWeb(clientMgmtin):
     urls = (
         '/portalDefault.html', defaultPage,
         '/logout.html', logoutPage,
     )
+
+    #global clientMgmt
+
+
+    #print clientMgmt
+
+    #print globals()
+
+    #globals = {"clientMgmt":clientMgmt}
+
+    global clientMgmt
+    clientMgmt = clientMgmtin
+
+    app = MyApplication(urls, globals())
+
+
+
+
+    print clientMgmt
+    #app.internalerror = web.debugerror
+    #app.run(port=8080)
+
+    webtt = myThread(app, 8080)
+    webtt.start()
+
+
+class MyApplication(web.application):
+    def __init__(self, mapping=(), fvars={}):
+        web.application.__init__(self, mapping, fvars)
+
+
+    def run(self, port=8080, *middleware):
+
+        #print "global", globals()
+        func = self.wsgifunc(*middleware)
+        return web.httpserver.runsimple(func, ('0.0.0.0', port))
+
+
+class myThread (threading.Thread):
+    def __init__(self, webApp, port):
+        threading.Thread.__init__(self)
+        self.webApp = webApp
+        self.port = port
+
+    def run(self):
+        self.webApp.run(self.port)
+
+if __name__ == "__main__":
+
     global portalCfg
     global udpSocket
     global receiver
@@ -79,10 +134,6 @@ if __name__ == "__main__":
 
     portalCfg = myPortalCfg()
     clientMgmt = portalClientMgmt(portalCfg)
+    launchPortalWeb()
 
-    #print globals()
-
-    app = web.application(urls, globals())
-    app.internalerror = web.debugerror
-    app.run()
 

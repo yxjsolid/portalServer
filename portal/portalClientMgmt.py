@@ -9,6 +9,37 @@ class portalClientMgmt():
         self.allAcObj = {}
         pass
 
+    def getGetClientDic(self):
+
+        clientDic = {}
+
+        clientList = []
+        for  client in self.testGetAllClients():
+            clientList.append({"acIp":client.serverIpStr, "userIp":client.userIpStr, "userName":client.usrName})
+        clientDic = {"allClients":clientList}
+        return clientDic
+
+
+    def testGetAllClients(self):
+        clients = []
+        for ac in self.allAcObj:
+            for clientKey in self.allAcObj[ac]:
+                client = self.allAcObj[ac][clientKey]
+                clients.append(client)
+
+        return clients
+
+
+    def clientDoAll(self, func):
+        for ac in self.allAcObj:
+            for clientKey in self.allAcObj[ac]:
+                client = self.allAcObj[ac][clientKey]
+                func(client)
+
+    def dumpAllClientsObj(self):
+        for  client in self.testGetAllClients():
+            print (client.serverIpStr, client.userIpStr, client.usrName)
+
     def dumpAllClients(self):
         print self.allAcObj, "len:", len(self.allAcObj)
         for ac in self.allAcObj:
@@ -30,12 +61,14 @@ class portalClientMgmt():
             self.dumpAllClients()
             return False
 
-    def doPortalLogout(self, wlanAcName, userIp):
-        acIp = self.getAcIpFromWlanAcname(wlanAcName)
+    def doPortalLogoutByAcIp(self, acIp, userIp):
         client = self.getPortalClient(acIp, userIp)
         client.doLogout()
-
         self.removeClient(acIp, userIp)
+
+    def doPortalLogoutByAcName(self, wlanAcName, userIp):
+        acIp = self.getAcIpFromWlanAcname(wlanAcName)
+        self.doPortalLogoutByAcIp(acIp, userIp)
 
     def removeClient(self, acIp, userIp):
         userIpStr = userIp.encode("utf8")
