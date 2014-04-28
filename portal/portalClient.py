@@ -29,6 +29,9 @@ class portalClient():
     _dictSerialNo_ = {}
 
     def __init__(self, userIpStr, serverIp, port, version, isPap, secret):
+        self.serverIpStr = serverIp
+        self.userIpStr = userIpStr
+
         self.server = (serverIp, int(port))
         self.userIp = socket.ntohl(struct.unpack("I", socket.inet_aton(userIpStr))[0])
         #self.threadEvent = threading.Event()
