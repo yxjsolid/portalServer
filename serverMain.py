@@ -30,7 +30,8 @@ loginForm = form.Form(
 
 class logoutPage():
     def __init__(self):
-        self.render = web.template.render('templates/', globals={"portalCfg":myPortalCfg()})
+        global portalCfg
+        self.render = web.template.render('templates/', globals={"portalCfg":portalCfg})
 
     def GET(self):
         return self.render.logout(web.ctx.fullpath, 1, 2400)
@@ -50,7 +51,8 @@ class logoutPage():
 class defaultPage():
     def __init__(self):
         global clientMgmt
-        self.render = web.template.render('templates/', globals={"portalCfg":myPortalCfg(), "clientMgmt":clientMgmt})
+        global portalCfg
+        self.render = web.template.render('templates/', globals={"portalCfg":portalCfg, "clientMgmt":clientMgmt})
 
     def GET(self):
 
@@ -84,14 +86,16 @@ class defaultPage():
 
 
 
-def launchPortalWeb(clientMgmtin, port):
+def launchPortalWeb(clientMgmtin, portalCfgIn, port):
     urls = (
         '/portalDefault.html', defaultPage,
         '/logout.html', logoutPage,
     )
 
     global clientMgmt
+    global portalCfg
     clientMgmt = clientMgmtin
+    portalCfg = portalCfgIn
     app = MyApplication(urls, globals())
     webThread = myThread(app, port)
     return webThread

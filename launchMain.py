@@ -17,7 +17,7 @@ class portalServerMgmt():
 
     def portalServerLaunch(self):
         port = self.serverCfg.webServerPort
-        self.serverThread = launchPortalWeb(clientMgmt, port)
+        self.serverThread = launchPortalWeb(clientMgmt, portalCfg, port)
         self.serverThread.start()
 
     def portalServerStop(self):
@@ -127,7 +127,7 @@ if __name__ == "__main__":
 
     #print globals()
     serverMgmt = portalServerMgmt()
-    serverMgmt.serverCfg =  myPortalCfg()
+    serverMgmt.serverCfg =  portalCfg
     serverMgmt.clientMgmt = portalClientMgmt(serverMgmt.serverCfg)
 
 
