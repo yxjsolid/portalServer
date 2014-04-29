@@ -4,12 +4,23 @@ from web import form
 from portal.portalClientMgmt import *
 
 class myPortalCfg():
-    logoutPopup = True
-    logo = "static/sonicwall.gif"
-    portalPort = "2000"
-    isPap = 1
-    portalVersion = 2
-    portalSecret = "shared"
+    def __init__(self):
+        self.logoutPopup = True
+        self.logo = "static/sonicwall.gif"
+        self.portalPort = "2000"
+        self.isPap = 1
+        self.portalVersion = 2
+        self.portalSecret = "shared"
+        self.webServerPort = 8080
+
+    def dumpJsonData(self):
+        cfgDic = {}
+        cfgDic['Port'] = self.webServerPort
+        cfgDic['authMethod'] = self.isPap
+        cfgDic['version'] = self.portalVersion
+        cfgDic['secret'] = self.portalSecret.encode("utf8")
+
+        return cfgDic
 
 loginForm = form.Form(
     form.Textbox('txtName'),
@@ -73,35 +84,18 @@ class defaultPage():
 
 
 
-def launchPortalWeb(clientMgmtin):
+def launchPortalWeb(clientMgmtin, port):
     urls = (
         '/portalDefault.html', defaultPage,
         '/logout.html', logoutPage,
     )
 
-    #global clientMgmt
-
-
-    #print clientMgmt
-
-    #print globals()
-
-    #globals = {"clientMgmt":clientMgmt}
-
     global clientMgmt
     clientMgmt = clientMgmtin
-
     app = MyApplication(urls, globals())
+    webThread = myThread(app, port)
+    return webThread
 
-
-
-
-    print clientMgmt
-    #app.internalerror = web.debugerror
-    #app.run(port=8080)
-
-    webtt = myThread(app, 8080)
-    webtt.start()
 
 
 class MyApplication(web.application):
@@ -124,6 +118,10 @@ class myThread (threading.Thread):
 
     def run(self):
         self.webApp.run(self.port)
+        print "thread done"
+
+    def stop(self):
+        self.webApp.stop()
 
 if __name__ == "__main__":
 

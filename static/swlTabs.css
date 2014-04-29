@@ -1,0 +1,756 @@
+/*
+ * Rounded-corner tabs
+ */
+
+.swlHeader 
+{
+	float:left;
+	clear: both;
+	width: 100%;
+	margin: 10px 0;
+	background: transparent url(tabBg.gif) repeat-x scroll center bottom;
+	line-height:normal;
+	z-index: 10;
+	min-height: 32px;
+	height: 32px;		/* optional? */
+}
+.swlHeader ul 
+{
+	float: left;
+	margin:0;
+	padding:10px 10px 0 12px;
+	list-style:none;
+}
+.swlHeader li 
+{
+	float:left;
+	margin-left:4px;
+	padding:0 0 0 9px;
+}
+.swlHeader a.tabText 
+{
+	float:left;
+	display:block;
+	padding:5px 15px 4px 6px;
+	text-decoration:none;
+	font-weight:bold;
+	color:#888888;
+}
+/* Commented Backslash Hack
+   hides rule from IE5-Mac \*/
+.swlHeader a.tabText 
+{
+	float:none;
+}
+/* End IE5-Mac hack */
+
+.swlHeader a.tabText:hover 
+{
+	color:#555;
+	cursor: pointer;
+}
+.swlHeader li.tabOff
+{
+	background:url("tabLeft.gif") no-repeat left bottom;
+	z-index: 1;
+}
+.swlHeader li.tabClsOff
+{
+	background:url("tabLeftOn.gif") no-repeat left bottom;
+	z-index: 1;
+}
+.swlHeader li.tabOff a.tabText 
+{
+	background:url("tabRight.gif") no-repeat right bottom;
+}
+.swlHeader li.tabClsOff a.tabText 
+{
+	background:url("tabRightOn.gif") no-repeat right bottom;
+}
+.swlHeader li.tabOn
+{
+	background:url("tabLeftOn.gif") no-repeat left bottom;
+	z-index: 10;
+}
+.swlHeader li.tabClsOn
+{
+	background:url("tabLeft.gif") no-repeat left bottom;
+	z-index: 10;
+}
+.swlHeader li.tabOn a.tabText 
+{
+	background:url("tabRightOn.gif") no-repeat right bottom;
+	color:#333;
+	padding-bottom:5px;
+}
+.swlHeader li.tabClsOn a.tabText 
+{
+	background:url("tabRight.gif") no-repeat right bottom;
+	color:#333;
+	padding-bottom:5px;
+}
+li.swlTabDisabled a.tabText
+{
+	color: #c3c3c3;
+	cursor: text;
+}
+li.swlTabDisabled:hover
+{
+	color: #c3c3c3;
+	cursor: text;
+}
+li.swlTabDisabled a.tabText:hover 
+{
+	color: #c3c3c3;
+	cursor: text;
+}
+
+#box
+{
+	float:left;
+	position: relative;
+	padding: 0;
+	text-align: left;
+	width: 810px;
+	margin-top:-1px;
+}
+
+div.swlContentContainer { 
+	clear: both;
+	padding: 0;
+	height: 360px;
+	width: 100%;
+	text-align: left;
+	z-index: 5;
+}
+.content
+{
+	padding: 1em 2em;
+	height: 340px;
+	width: 100%;
+	/* ie hack, style with '_' prefix can be read by ie only,
+	   this will fix the content size to 750px for ie */
+	/* _width: 810px; */
+}
+.content h1
+{
+	color:#0354c2;
+	font-weight: bold;
+	font-size: 1.2em;
+	font-family: helvetica, geneva, arial, sans-serif;
+}
+.content p
+{
+	color:#3b3b3b;
+	font-size: 1em;
+	line-height: 1.3em;
+	font-family: arial, helvetica, sans-serif;
+}
+
+div.swlContentHdr { 
+	display: block;
+	width: 99%;
+	height: 30px;
+	min-height: 30px;	/* required */
+	border: none; 
+	margin: 0px 0px;
+	padding: 0px 0px;
+	background: transparent none;
+}
+
+div.swlTableFilter 
+	height: 22px;
+	padding: 0 .2em 0 0;
+	margin: 0;
+}
+
+div#footer {
+	width: auto;
+	height: 28px;
+	line-height: 22px;
+	border: none;
+	margin: 0;
+}
+
+#small_box,
+.smallBox
+{
+	float:left;
+	position: relative;
+	padding: 0;
+	text-align: left;
+	width: 500px;
+	margin-top:-1px;
+}
+#small_box_content,
+.smallBoxContent
+{
+	padding: 1em 2em 1em 2em;
+	/*height:350px;*/
+	/* ie hack, style with '_' prefix can be read by ie only,
+	   this will fix the content size to 550px for ie */
+	_width:550px;
+}
+#small_box_content h1,
+.smallBoxContent h1
+{
+	color:#0354c2;
+	font-weight: bold;
+	font-size: 1.2em;
+	font-family: helvetica, geneva, arial, sans-serif;
+}
+#small_box_content p,
+.smallBoxContent p
+{
+	color:#3b3b3b;
+	font-size: 1em;
+	line-height: 1.3em;
+	font-family: arial, helvetica, sans-serif;
+}
+
+.swlHdrButtonBar {
+	clear: both;
+	background-image: url(bbar_back.gif);
+	padding: 6px;
+	height: 22px;
+	width: auto;
+	margin-right: 10px;
+}
+.swlHdrLineDark {
+	background-color: #aaaaaa;
+	background-image: url(clear.gif);
+	background-repeat: repeat-x;
+	clear: both;
+	font-size: 0px;
+	overflow: hidden;
+	height: 1px;
+	width: auto;
+	margin-right: 10px;
+}
+
+.swlPgCtrl {
+	width: 30px;
+	height: 20px;
+	font-size: x-small;
+	vertical-align: middle;
+}
+.swlPgEndSize {
+	margin-left: -3px;
+	padding-left: 0;
+	min-width: 50px;
+	vertical-align: middle;
+}
+.swlPgLabel {
+	margin-left: 2px;
+}
+.swlPgLabel span {
+	margin-right: 0;
+}
+.swlTblCtrls {
+	margin-top: -4px;
+}
+
+.swlStylizeGrowlPopup
+{
+	padding: 10px 20px 20px;	/* ensures content is within rounded corner divs */
+}
+
+.swlStylizeGrowl
+{
+	background-color: white;
+	padding-bottom: 10px;
+}
+
+.swlStylizeGrowlHdr
+{
+	background-color: transparent;
+	color: #4e5E7F;
+	width: 90%;
+	font-size: 11px;
+	font-weight: bold;
+	min-height: 22px;
+	padding: 2px 0 0 10px;
+	margin-bottom: 22px;
+	text-align: left;
+}
+
+.swlStylizePopup
+{
+	padding: 10px 20px 15px;
+	height: auto;
+}
+
+.swlStylizePopupClose
+{
+	float: right;
+	background-color:transparent;
+}
+
+.swlStylizePopupHdr
+{
+	background: #EFF0F4  no-repeat;
+	color: #4e5E7F;
+	width: 100%;
+	font-size: 11px;
+	font-weight: bold;
+	min-height: 22px;
+	padding-top: 2px;
+	margin-bottom: 22px;
+	text-align: left;
+}
+.swlStylizePopupHdr span
+{
+	margin-left: 2px;
+	padding-left: 4px;
+}
+.swlCloseIcon,
+.swlPopupIcon
+{
+	float: right;
+	background-color: transparent;
+	margin: 4px 10px 0 0;
+	cursor:pointer;
+}
+.swlBoxTitle
+{
+	height: 32px;
+	padding: 2px 8px;
+}
+.swlBoxTitleInset
+{
+	font-weight:bold;
+	font-size:14px;
+	background-color:#f5f5f5;
+	padding: 0.2em 0.5em 0.5em;
+	margin: 5px 2px 0;
+}
+
+.box_title,
+.swlBoxTitleOffset
+{
+	position:relative; 
+	left:30px; 
+	top:7px;
+	padding: 0 5px 0 5px;
+	background-color: white;
+	background-repeat: repeat;
+	color: Gray;
+	font-family: Tahoma, Arial, Verdana, sans-serif;
+	font-size : 12px;
+	font-weight : bold;
+}
+
+.swlWrapTitle {
+	margin-top: 3px;
+	padding: 1px 8px;
+	width: auto;
+}
+.swlWrapTitleInset
+{
+	font-weight: bold;
+	font-size: 14px;
+	background-color: #f5f5f5;
+	margin: 1px 4px 0;
+	padding: 6px;
+}
+/*
+ * Rounded-corner containers
+ */
+
+/* ---=== border code follows ===--- */
+/*
+	tlc = top left corner
+	trc = top right corner
+	blc = bottom left corner
+	brc = bottom right corner
+	lb = left border
+	rb = right border
+	tb = top border
+	bb = bottom border 
+*/
+
+.tlc, .trc,
+.tlcgray, .trcgray,
+.tlcyellow, .trcyellow,
+.swltlc, .swltrc,
+.swltlcgray, .swltrcgray,
+.swltlcyellow, .swltrcyellow
+{ 
+	zoom: 1; 
+}
+.tlc, .trc, .blc, .brc, .swltlc, .swltrc, .swlblc, .swlbrc,
+.tlcgray, .trcgray, .blcgray, .brcgray, .swltlcgray, .swltrcgray, .swlblcgray, .swlbrcgray,
+.tlcyellow, .trcyellow, .blcyellow, .brcyellow, .swltlcyellow, .swltrcyellow, .swlblcyellow, .swlbrcyellow
+{
+	background-color: transparent;
+	background-repeat: no-repeat;
+}
+.tlc, .swltlc
+{
+	background-image:url(tbl_tlc.gif);
+	background-position: 0% 0%;
+}
+.tlcgray, .swltlcgray
+{
+	background-image:url(tbl_tlc_graybg.gif);
+	background-position: 0% 0%;
+}
+.tlcyellow, .swltlcyellow
+{
+	background-image:url(tbl_tlc_yellowbg.gif);
+	background-position: 0% 0%;
+}
+.trc, .swltrc
+{
+	background-image:url(tbl_trc.gif);
+	background-position: 100% 0%;
+	padding-bottom: 4px;
+}
+.trcgray, .swltrcgray
+{
+	background-image:url(tbl_trc_graybg.gif);
+	background-position: 100% 0%;
+}
+.trcyellow, .swltrcyellow
+{
+	background-image:url(tbl_trc_yellowbg.gif);
+	background-position: 100% 0%;
+}
+.blc, .swlblc
+{
+	background-image:url(tbl_blc.gif);
+	background-position: 0% 100%;
+}
+.blcgray, .swlblcgray
+{
+	background-image:url(tbl_blc_graybg.gif);
+	background-position: 0% 100%;
+}
+.blcyellow, .swlblcyellow
+{
+	background-image:url(tbl_blc_yellowbg.gif);
+	background-position: 0% 100%;
+}
+.brc, .swlbrc
+{
+	background-image:url(tbl_brc.gif);
+	background-position: 100% 100%;
+}
+.brcgray, .swlbrgray
+{
+	background-image:url(tbl_brc_graybg.gif);
+	background-position: 100% 100%;
+}
+.brcyellow, .swlbrcyellow
+{
+	background-image:url(tbl_brc_yellowbg.gif);
+	background-position: 100% 100%;
+}
+.tb, .tb_line, .bb,
+.tbgray, .tb_linegray, .bbgray,
+.tbyellow, .tb_lineyellow, .bbyellow,
+.swltb, .swltb_line, .swlbb,
+.swltbgray, .swltb_linegray, .swlbbgray,
+.swltbyellow, .swltb_lineyellow, .swlbbyellow
+{
+	background-color: transparent;
+	background-repeat: repeat-x;
+}
+.tb, .tbgray, .tbyellow,
+.swltb, .swltbgray, .swltbyellow
+{
+	background-image:url(tbl_tb_line.gif);
+	background-position: 0% 0%;
+}
+.tb_line,
+.swltb_line
+{
+	background-image:url(tbl_tb_line.gif);
+	background-position: 0% 0%;
+}
+.tb_linegray,
+.swltb_linegray
+{
+	background-image:url(tbl_tb_line_graybg.gif);
+	background-position: 0% 0%;
+}
+.tb_lineyellow,
+.swltb_lineyellow
+{
+	background-image:url(tbl_tb_line_yellowbg.gif);
+	background-position: 0% 0%;
+}
+.bb,
+.swlbb
+{
+	background-image:url(tbl_bb.gif);
+	background-position: 50% 100%;
+}
+.bbgray,
+.swlbbgray
+{
+	background-image:url(tbl_bb_graybg.gif);
+	background-position: 50% 100%;
+}
+.bbyellow,
+.swlbbyellow
+{
+	background-image:url(tbl_bb_yellowbg.gif);
+	background-position: 50% 100%;
+}
+.rb,
+.swlrb
+{
+	background-image:url(tbl_r.gif);
+	background-position: 100% 0%;
+	background-repeat: repeat-y;
+}
+.rbgray,
+.swlrbgray
+{
+	background-image:url(tbl_r_graybg.gif);
+	background-position: 100% 0%;
+	background-repeat: repeat-y;
+}
+.rbyellow,
+.swlrbyellow
+{
+	background-image:url(tbl_r_yellowbg.gif);
+	background-position: 100% 0%;
+	background-repeat: repeat-y;
+}
+.lb,
+.swllb
+{
+	background-image:url(tbl_l.gif);
+	background-position: 0% 100%;
+	background-repeat: repeat-y;
+}
+.lbgray,
+.swllbgray
+{
+	background-image:url(tbl_l_graybg.gif);
+	background-position: 0% 100%;
+	background-repeat: repeat-y;
+}
+.lbyellow,
+.swllbyellow
+{
+	background-image:url(tbl_l_yellowbg.gif);
+	background-position: 0% 100%;
+	background-repeat: repeat-y;
+}
+
+/*
+ * Pagination
+ */
+.pagination 
+{
+	float: right;
+	font-size: 100%;
+	margin: 0;
+	padding: 10px 0 0;
+}
+.pagination a, 
+.pagination a:link, 
+.pagination a:visited 
+{
+	background: transparent;
+	text-decoration: none;
+	border: solid 1px #cccccc;
+	color: #2D254C;
+}
+.pagination a:hover 
+{
+	background: #d6dffc;
+	text-decoration: none;
+	border: solid 1px #cccccc;
+	cursor: pointer
+}
+.pagination a, 
+.pagination span 
+{
+	display: block;
+	float: left;
+	height: 14px;
+	padding: 0.2em 0.4em;
+	margin-right: 3px;
+	margin-bottom: 3px;
+}
+.pagination .current 
+{
+	background: url(table_column_back_hi.gif) repeat-x;
+	color: #2D254C;;
+	border: solid 1px #cccccc;
+	cursor: default;
+}
+
+.pagination .prev, 
+.pagination a.prev:link, 
+.pagination a.prev:visited, 
+.pagination a.prev:hover,
+.pagination .next,
+.pagination a.next:link, 
+.pagination a.next:visited, 
+.pagination a.next:hover 
+{
+	color: transparent;
+	background: transparent;
+	border: none;
+	cursor: pointer;	
+}
+
+.pagination a[disabled] {
+	color: #eee;
+	border: 0;
+	background: transparent;
+}
+
+.pagination a[disabled]:hover {
+	cursor: default;
+}
+
+.pagination .jumpLoc {
+	cursor: pointer;	
+}
+
+.pagination span.current:hover {
+	cursor: default;
+}
+
+.swlStatus {
+	position: relative;
+	clear: both;
+	background-color: #fff;
+	margin-top: -4px;
+	min-height: 20px;
+	padding: 4px 0 0 10px;
+}
+.swlStatus img {
+	margin-right: 10px;
+	padding-bottom: 2px;
+}
+.swlStatus span {
+	vertical-align: top;
+}
+.swlStatusError {
+	font-color: red;
+}
+.swlStatusWarning {
+	font-color: yellow;
+}
+.swlTableFilter {
+	float: left;
+	position: relative;			/* added so IE will apply subordinate rules on contained elems */
+}
+
+.swlTableFilter img {
+	padding-left: 4px;
+}
+
+.swlTableFilter span {
+	padding-right: 1em;
+}
+
+.swlTableFilter select {
+	width: 100px;
+}
+
+.swlTableSearch {
+	float: right;
+	margin-top: -3px;
+}
+
+.swlTableSearch input {
+	width: 150px;
+}
+
+/* for IE and Opera support of fade in/out effect */
+.fadeItem {
+	background-color: #FCFDFF;
+}
+.fadeInMid {
+	background-color: #F8FAFF;
+}
+.fadeInMid1 {
+	background-color: #F4F7FF;
+}
+.fadeInMid2 {
+	background-color: #F0F4FF;
+}
+.fadeInMid3 {
+	background-color: #ECF1FF;
+}
+.fadeInMid4 {
+	background-color: #E8EEFF;
+}
+.fadeInFinal {
+	background-color: #E4EBFF;
+}
+.fadeOutMid {
+	background-color: #E8EEFF;
+}
+.fadeOutMid1 {
+	background-color: #ECF1FF;
+}
+.fadeOutMid2 {
+	background-color: #F0F4FF;
+}
+.fadeOutMid3 {
+	background-color: #F4F7FF;
+}
+.fadeOutMid4 {
+	background-color: #F8FAFF;
+}
+.fadeOutFinal {
+	background-color: #FFFFFF;
+}
+
+/* rounded buttons */
+
+.roundBtn
+{
+    border: 0;
+    margin: 0;
+    background: transparent url(round_btn_left.gif) no-repeat;
+    height: 23px;
+    /* used to catch the buttonEnding - this must be static so that it's offset affects 
+     * the following roundBtnEnd */
+    position: static;
+    margin: 0 0 1px 1em;
+    vertical-align: bottom;
+}
+
+.roundBtn[disabled] {
+    background: transparent url(round_btn_left.gif) no-repeat;
+    height: 23px;
+    color: #999;
+}
+
+.roundBtnEnd
+{
+    position: absolute;
+    display: inline;
+    width: 5px;
+    height: 23px;
+    border: 0;
+    margin: 0;
+    background: url(round_btn_right.gif) no-repeat;
+    vertical-align: bottom;
+}
+
+/* for Internet Explorer */
+/*\*/
+* html .roundBtnEnd
+{
+    position: absolute;
+    display: inline;
+    width: 5px;
+    height: 23px;
+    border: 0;
+    margin-left: -3px;
+    background: url(round_btn_right.gif) no-repeat;
+}
+/**/
+
+

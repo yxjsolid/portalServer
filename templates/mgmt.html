@@ -18,6 +18,8 @@ $code:
 <HEAD>
 <TITLE>Portal Server Management</TITLE>
 <script type="text/JavaScript" src="static/jquery-2.1.0.min.js"></script>
+<link rel=stylesheet href="static/swl_styles.css" TYPE="text/css">
+<link rel=stylesheet href="static/swlTabs.css" TYPE="text/css">
 <SCRIPT LANGUAGE="Javascript"> 
 
 //'Javascript Seconds Countdown Timer
@@ -29,50 +31,48 @@ function clientObj()
 	this.user = ""
 }
 
-
 function onLoadFunc()
 {
-		checkData();
+		checkServerSettings();
+		checkClientData();
 
-}
-
-function putClientList()
-{
-	
-	
 }
 
 function doClientLogout(acip, userip)
 {
-
-	alert("doClientLogout");
-	alert(acip + " " + userip);
-	
-	
-	handleJson ({'data' : 'action=logout;' + 'acIp=' + acip + ';userIp=' + userip,'type' : 'POST'});
-	
+	var option = {
+				type: 'POST',
+				data: 'action=startServer;' + 'action=logout;' + 'acIp=' + acip + ';userIp=' + userip,
+				url:  "doLogout.json",
+			};
+	handleJson (option);	
 }
-
-
-function ajaxSuccess(jsonData)
+function ajaxGetStatusSuccess(jsonData)
 {	
+	var serverStatus = jsonData.serverStatus;
 	var clients = jsonData.allClients;
 	var clientinfo = "";
 	
-	var tbl = document.getElementById("allClients");
+	setServerStatus(serverStatus);
 	
+	var tbl = document.getElementById("allClients");
 	for(var i=0; i<clients.length; i++)
 	{
 		var client = clients[i];
-		clientinfo  +=  '<td class="listLabel" nowrap>'+ client.acIp+'</td>\n';
-		clientinfo  +=  '<td class="listLabel" nowrap>'+ client.userIp+'</td>\n';
-		clientinfo  +=  '<td class="listLabel" nowrap>'+ client.userName+'</td>\n';
+		clientinfo  +=  '<td class="listItem" nowrap>'+ client.acIp+'</td>\n';
+		clientinfo  +=  '<td class="listItem" nowrap>'+ client.userIp+'</td>\n';
+		clientinfo  +=  '<td class="listItem" nowrap>'+ client.userName+'</td>\n';
 		var param = "'" + client.acIp + "','" + client.userIp + "'";
 		clientinfo  +=  '<td class="button" nowrap><button type="button" onclick="doClientLogout('+ param +')">logout!</button></td>\n';
   }
   tbl.innerHTML = clientinfo;  
 }
 
+
+function ajaxSuccess(jsonData)
+{
+
+}
 function ajaxError(jsonData)
 {
 	alert("ajaxError");	
@@ -82,8 +82,8 @@ function ajaxError(jsonData)
 			var options = options || {};
 			var defaults = {
 				type:"GET",
-				url: window.location.href.substring(0, window.location.href.lastIndexOf("/") + 1) +
-					"getJsonData.json",
+				//url: window.location.href.substring(0, window.location.href.lastIndexOf("/") + 1) + page,
+				url:"getJsonData.json",
 				data: 'dataSet=all',
 				success: ajaxSuccess,
 				error: ajaxError
@@ -102,13 +102,167 @@ function ajaxError(jsonData)
 			});
 		}
 
-
-function checkData()
+function setServerStatus(isOn)
 {
-	handleJson ({'data' : 'dataSet=allClient','type' : 'GET'});
-	setTimeout(checkData, 1000);
+	var f = document.frmValidator;
+	f.startBtn.disabled = isOn;
+	f.stopBtn.disabled = !isOn;
+	
+	if (isOn)
+	{
+		document.getElementById('serverStatusInfo').innerHTML= "Enabled";
+	}
+	else
+	{
+		document.getElementById('serverStatusInfo').innerHTML= "Disabled";
+	}
+	disableServerSettings(isOn);
+}
+
+
+function disableServerSettings(disable)
+{
+	var f = document.frmValidator;
+	f.webServerPort.disabled = disable
+	
+	for (var i =0; i < f.authMethod.length; i++)
+	{
+			if (disable)
+			{
+				f.authMethod[i].setAttribute('disabled', 1);
+			}
+			else
+			{
+				f.authMethod[i].removeAttribute('disabled');
+			}
+	}
+		
+	for (var i =0; i < f.portalVersion.length; i++)
+	{
+			if (disable)
+			{
+				f.portalVersion[i].setAttribute('disabled', 1);
+			}
+			else
+			{
+				f.portalVersion[i].removeAttribute('disabled');
+			}
+	}
+	f.sharedSecret.disabled = disable
+}
+
+function ajaxGetServerSettingSuccess(jsonData)
+{
+	var f = document.frmValidator;
+	var secret = jsonData.secret;
+	var authMethod = jsonData.authMethod;
+	var Port = jsonData.Port;
+	var version = jsonData.version;
+		
+	f.webServerPort.value = Port;
+	f.sharedSecret.value = secret;	
+	
+	for (var i =0; i < f.authMethod.length; i++)
+	{
+			if (f.authMethod[i].value == authMethod)
+			{
+				f.authMethod[i].checked = true;
+			}	
+	}
+	
+	for (var i =0; i < f.portalVersion.length; i++)
+	{
+			if (f.portalVersion[i].value == version)
+			{
+				f.portalVersion[i].checked = true;
+			}	
+	}
+	
+
+}
+
+function checkServerSettings()
+{
+		var option = {
+				data: 'dataSet=serverSettings',
+				url: 'getServerSettingsJson.json',
+				success: ajaxGetServerSettingSuccess,
+				error: ajaxError
+			};
+			
+		handleJson (option);
+}
+
+function genServerSettingsCfg()
+{
+	var f = document.frmValidator;
+	var cfg = "";
+	var auth = 0;
+	var version = 0;
+	
+	for (var i =0; i < f.authMethod.length; i++)
+	{
+			if (f.authMethod[i].checked)
+			{
+				auth = f.authMethod[i].value;
+			}	
+	}
+	
+	for (var i =0; i < f.portalVersion.length; i++)
+	{
+			if (f.portalVersion[i].checked)
+			{
+				version = f.portalVersion[i].value;
+			}	
+	}
+	
+	
+	cfg += "serverPort=" + f.webServerPort.value;
+	cfg += ";authMethod=" + auth;
+	cfg += ";version=" + version;
+	cfg += ";secret=" + f.sharedSecret.value;
+	
+	return cfg;	
+}
+
+function onStartServer()
+{
+	var serverSettings = genServerSettingsCfg();
+	
+	var option = {
+				type: 'POST',
+				data: 'action=startServer;' + serverSettings,
+				url:  "configServerJson.json",
+			};
+	
+	handleJson (option);
+}
+
+function onStopServer()
+{
+	var option = {
+				type: 'POST',
+				data: 'action=stopServer',
+				url:  "configServerJson.json",
+			};
+	
+	handleJson (option);
+}
+
+function checkClientData()
+{
+	var option = {
+				data: 'dataSet=status',
+				url:  "getStatusJson.json",
+				success: ajaxGetStatusSuccess,
+			};
+	
+	handleJson (option);
+	setTimeout(checkClientData, 1000);
 		
 }
+
+
 
 
 </SCRIPT> 
@@ -118,16 +272,91 @@ function checkData()
 <BODY onload='onLoadFunc()'>
 <span id="loggedIn">
 <form id="frmValidator" name="frmValidator" method="post">
-<table width="100%" border="0" cellpadding="2" cellspacing="0">
-	<tr class="heading">
-		<td colspan=2 align="center">&nbsp</td>
+	
+<div id="pageHeader">
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+	<tbody style="height: auto;">
+		
+		<tr>
+			<td class="header"> Server Status:
+				<span class="header" id="serverStatusInfo"> Disabled</span>
+				</td>
+				</tr>
+	</tbody>
+</table>
+	</div>
+	
+<div id="hdrLineWrapper">
+		<div class="swlHdrLineDark" style="margin-top:12px"></div>
+		<div class="swlHdrButtonBar">
+			<input value="Start" name="startBtn" style="right:34px;" onclick="onStartServer();"  class="button" type="button">
+			<input value="Stop" name="stopBtn" style="right:34px;" onclick="onStopServer();" class="button" type="button">
+		</div>
+		<div class="swlHdrLineDark"></div>
+</div>
+	
+<br>
+<br>	
+<table border="0" cellspacing="0" cellpadding="0" width="100%" summary="">
+	<tr><td class="groupLabel">Server Settings:</td></tr>
+	<tr><td class="line3Ddark" width="100%" height="1"><img src="static/clear.gif" height="1" alt="" /></td></tr>
+	<tr><td class="line3Dlite" width="100%" height="1"><img src="static/clear.gif" height="1" alt="" /></td></tr>
+</table>
+<br />
+	
+	
+	
+<table border="0" width="100%" cellspacing="0" cellpadding="4">
+	<tr>
+		<td class="label" width="310">Web Server Port:</td>
+		<td class="label" nowrap><input type="text" name="webServerPort" size="5" maxlength="5" /></td>
 	</tr>
 	
 	<tr>
-			<td class="listLabel" nowrap>AC</td>
-			<td class="listLabel" nowrap>User Ip</td>
-			<td class="listLabel" nowrap>User Name</td>
-			<td class="listLabel" nowrap>log out</td>
+		<td class="label" width="310" nowrap>Auth method:</td>
+		<td class="label" nowrap>
+			<input type="radio" id="authMethodPap" name="authMethod" value="1" CHECKED>
+			<label for="authMethodPap">PAP</label>
+			&nbsp;&nbsp;
+			<input type="radio" id="authMethodChap" name="authMethod" value="0" >
+			<label for="authMethodChap">CHAP</label>
+		</td>
+	</tr>
+	
+	<tr>
+		<td class="label" width="310" nowrap>Portal Version:</td>
+		<td class="label" nowrap>
+			<input type="radio" id="portalVersion1" name="portalVersion" value="1" CHECKED>
+			<label for="portalVersion1">v1.0</label>
+			&nbsp;&nbsp;
+			<input type="radio" id="portalVersion2" name="portalVersion" value="2" >
+			<label for="portalVersion2">v2.0</label>
+		</td>
+	</tr>
+	
+	<tr>
+		<td class="label" width="310">Shared secret:</td>
+		<td class="label" nowrap><input type="text" name="sharedSecret" value="" size="16" maxlength="16" /></td>
+	</tr>
+	
+</table>
+	
+<br>
+<br>	
+<table border="0" cellspacing="0" cellpadding="0" width="100%" summary="">
+        <tr><td class="groupLabel">Portal Clients</td></tr>
+        <tr><td class="line3Ddark" width="100%" height="1"><img src="static/clear.gif" height="1" alt="" /></td></tr>
+        <tr><td class="line3Dlite" width="100%" height="1"><img src="static/clear.gif" height="1" alt="" /></td></tr>
+</table>
+<br />
+        
+
+<table class="listControl" border="0" width="60%" cellspacing="0" cellpadding="0" summary="" nowrap="">	
+	<tr>
+			<td class="listLabel" nowrap=""  align="left">AC</td>
+			<td class="listLabel" nowrap=""  align="left">User Ip</td>
+			<td class="listLabel" nowrap=""  align="left">User Name</td>
+			<td class="listLabel" nowrap=""  align="left">log out</td>
 	</tr>
 	
 	<tr name="allClients" id="allClients">
