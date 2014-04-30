@@ -1,8 +1,6 @@
-__author__ = 'xyang'
 import web
-from web import form
 from portal.portalClientMgmt import *
-from serverMain import *
+from webServer import *
 import time
 import json
 
@@ -63,9 +61,7 @@ class configServerJson:
         action = web.input().action
 
         serverCfg = serverMgmt.serverCfg
-
         if action.encode("utf8") == "startServer":
-            print "start server!!!!!!!!!"
             serverCfg.isPap = int(web.input().authMethod)
             serverCfg.portalVersion = int(web.input().version)
             serverCfg.portalSecret = web.input().secret.encode("utf8")
@@ -115,9 +111,6 @@ def launchMain():
 if __name__ == "__main__":
 
     global serverMgmt
-
-
-
     global portalCfg
     global clientMgmt
     global portalServerThread
@@ -129,13 +122,9 @@ if __name__ == "__main__":
     serverMgmt = portalServerMgmt()
     serverMgmt.serverCfg =  portalCfg
     serverMgmt.clientMgmt = portalClientMgmt(serverMgmt.serverCfg)
+    serverMgmt.portalServerLaunch()
 
-
+    time.sleep(0.1)
 
     launchMain()
-    #
-    time.sleep(1)
 
-    # portalServerThread = launchPortalWeb(clientMgmt, 8080)
-    # portalServerThread.start()
-    print "done"
