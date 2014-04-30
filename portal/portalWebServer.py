@@ -1,26 +1,7 @@
 # -*- coding: utf-8 -*-
 import web
 from web import form
-from portal.portalClientMgmt import *
-
-class myPortalCfg():
-    def __init__(self):
-        self.logoutPopup = True
-        self.logo = "static/sonicwall.gif"
-        self.portalPort = "2000"
-        self.isPap = 1
-        self.portalVersion = 2
-        self.portalSecret = "shared"
-        self.webServerPort = 8080
-
-    def dumpJsonData(self):
-        cfgDic = {}
-        cfgDic['Port'] = self.webServerPort
-        cfgDic['authMethod'] = self.isPap
-        cfgDic['version'] = self.portalVersion
-        cfgDic['secret'] = self.portalSecret.encode("utf8")
-
-        return cfgDic
+from portalClientMgmt import *
 
 loginForm = form.Form(
     form.Textbox('txtName'),
@@ -86,7 +67,7 @@ class defaultPage():
 
 
 
-def launchPortalWeb(clientMgmtin, portalCfgIn, port):
+def launchPortalWeb(serverMgmt, port):
     urls = (
         '/portalDefault.html', defaultPage,
         '/logout.html', logoutPage,
@@ -94,8 +75,8 @@ def launchPortalWeb(clientMgmtin, portalCfgIn, port):
 
     global clientMgmt
     global portalCfg
-    clientMgmt = clientMgmtin
-    portalCfg = portalCfgIn
+    clientMgmt =  serverMgmt.clientMgmt
+    portalCfg = serverMgmt.serverCfg
     app = MyApplication(urls, globals())
     webThread = myThread(app, port)
     return webThread

@@ -1,9 +1,8 @@
 import web
-from portal.portalClientMgmt import *
-from webServer import *
+from portalClientMgmt import *
+from portalWebServer import *
 import time
 import json
-
 
 class portalServerMgmt():
     def __init__(self):
@@ -15,7 +14,7 @@ class portalServerMgmt():
 
     def portalServerLaunch(self):
         port = self.serverCfg.webServerPort
-        self.serverThread = launchPortalWeb(clientMgmt, portalCfg, port)
+        self.serverThread = launchPortalWeb(self, port)
         self.serverThread.start()
 
     def portalServerStop(self):
@@ -91,7 +90,7 @@ class doLogoutJson:
         web.header('Content-Type', 'application/json')
         return json.dumps(None)
 
-def launchMain():
+def launchMain(serverMgmtIn):
     urls = (
         '/', mgmtPage,
         '/getStatusJson.json', getStatusJson,
@@ -99,12 +98,18 @@ def launchMain():
         '/doLogout.json', doLogoutJson,
         '/configServerJson.json', configServerJson,
     )
-    app = MyApplication(urls, globals())
-    #app.internalerror = web.debugerror
-    #app.run(port=8888)
 
-    webtt = myThread(app, 8888)
-    webtt.start()
+    global clientMgmt
+    global portalCfg
+    global serverMgmt
+    clientMgmt =  serverMgmtIn.clientMgmt
+    portalCfg = serverMgmtIn.serverCfg
+    serverMgmt = serverMgmtIn
+    app = MyApplication(urls, globals())
+
+
+    webthread = myThread(app, portalCfg.mgmtPort)
+    webthread.start()
 
 
 
